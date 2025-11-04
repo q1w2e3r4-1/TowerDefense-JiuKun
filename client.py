@@ -166,6 +166,8 @@ def main():
             continue
 
         if not game_over:
+            recorder.write("User Action: ")
+            recorder.write(action)  # 记录客户端动作
             sio.emit("action", action)
 
         time.sleep(0.1)
@@ -175,7 +177,7 @@ def main():
         recorder.close()
 
 if __name__ == "__main__":
-    # 测试： --team_id=test_team_id --action=auto
+    # 测试： python client.py --game_id 0 --action auto
     parser = argparse.ArgumentParser()
     parser.add_argument("--team_id", default=None, type=str)
     parser.add_argument("--game_id", default=0, type=int) # 设置玩的游戏
