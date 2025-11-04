@@ -80,49 +80,52 @@ def main():
         # 等待接收服务器的信息
         if not response_event.wait(timeout=1):
             continue
-        response_event.clear() 
+        response_event.clear()
         resp = response_data
-        # recorder.write("[SERVER RESPONSE] " + str(resp), debug=DEBUG)
-        recorder.write(f"Round: {resp['i_round']}, Coins: {resp['n_coins']}", debug=DEBUG)
-        if 'store' in resp:
-            recorder.write("Store: " + str(resp["store"]), debug=DEBUG)
+
+        # 每轮开始时打印重要信息
         if resp.get("start_round"):
-            recorder.write("** New round started **", debug=DEBUG)
+            recorder.write("\n\n\n\n==============================", debug=DEBUG)
+            round_num = resp.get("i_round", "?")
+            recorder.write(f"** New round {round_num} started **", debug=DEBUG)
+            if "enemy_name" in resp:
+                recorder.write(f"Enemy Name: {resp['enemy_name']}", debug=DEBUG)
+            if "enemy_description" in resp:
+                recorder.write(f"Enemy Description: {resp['enemy_description']}", debug=DEBUG)
+            recorder.write(f"Coins: {resp.get('n_coins', '?')}", debug=DEBUG)
+            recorder.write("==============================", debug=DEBUG)
+        else:
+            recorder.write(f"Coins: {resp['n_coins']}", debug=DEBUG)
+            if 'store' in resp:
+                recorder.write("Store: " + str(resp["store"]), debug=DEBUG)
+
         if resp.get("game_over"):
             game_over = True
             recorder.write("** Game Over **", debug=DEBUG)
-
-        if 'game_over' in resp and resp['game_over']:
-            game_over = True
 
         if 'enemy_description' in resp:
             cmd = 'predict'
             # ====== TODO_pred: 下面可以改成自己的代码，用于提交预测结果
             label_pred = {
-                'best_atk_spd': ['Normal'], 
-                'weak': ['Fire', 'Ice', 'Poison'], 
-                'resist': ['Blunt', 'Lightning'], 
-                'special_eff': ['Fire'], 
+                'best_atk_spd': ['Normal'],
+                'weak': ['Fire', 'Ice', 'Poison'],
+                'resist': ['Blunt', 'Lightning'],
+                'special_eff': ['Fire'],
                 'slow_eff': ['Normal'],
                 'occurrence': ['Triple'],
             }
             # ====== 上面可以改成自己的代码，用于提交预测结果
-        
         else:
             if action_mode == 'input':
                 if not game_over:
                     cmd = input("\nEnter action ('refresh' or 'buy item_idx bag_idx' or 'end'): ").strip()
-
             else:
-
                 # ====== TODO_strategy: 下面可以改成自己的代码，用于处理决策
-
                 if 'towers_list' in resp and 'map' in resp: # 第一轮开始
                     n_bag = len(resp['map']['extra'])
                 if 'towers_list' in resp : # 每一轮开始
                     i_bag = 0
-
-                if resp['n_coins'] < 10 or i_bag >= n_bag: 
+                if resp['n_coins'] < 10 or i_bag >= n_bag:
                     cmd = 'end'
                     i_bag = 0
                 else:
@@ -132,10 +135,7 @@ def main():
                     else:
                         cmd = f"buy {random.randint(0, len(resp['store'])-1)} {i_bag}"
                         i_bag += 1
-                
                 # ====== 上面可以改成自己的代码，用于处理决策
-
-            
 
         if cmd.lower() == "refresh":
             action = {"type": "refresh"}
@@ -155,7 +155,7 @@ def main():
             continue
 
         if not game_over:
-            recorder.write("User Action: " + str(action), debug=DEBUG)
+            recorder.write("[User Action] " + str(action), debug=DEBUG)
             sio.emit("action", action)
 
         time.sleep(0.1)
