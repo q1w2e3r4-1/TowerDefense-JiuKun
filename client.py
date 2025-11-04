@@ -11,7 +11,7 @@ from game_recorder import GameRecorder
 
 response_event = threading.Event()
 response_data = None
-
+DEBUG = True
 # ====== 配置 ======
 SERVER_URL = "http://117.186.102.78:32500/"
 TEAM_ID = open("team_id").readlines()[0].strip()
@@ -35,29 +35,19 @@ recorder = None
 
 @sio.event
 def connect():
-    print("[CLIENT] Connected to server")
+    recorder.write("[CLIENT] Connected to server", debug=True)
     sio.emit("begin", {"team_id": TEAM_ID, "game_id": GAME_ID})
 
 @sio.event
 def disconnect(reason = 'server disconnected'):
     global game_over
-    print("[CLIENT] Disconnected: "+ reason)
+    recorder.write("[CLIENT] Disconnected: " + reason, debug=True)
     game_over = True
 
 @sio.on("response")
 def on_response(data):
     global game_over
     global response_data
-
-    print("\n[SERVER RESPONSE]")
-
-    # 记录服务器响应内容
-    if recorder:
-        recorder.write(data)
-
-    if 'init' in data:
-        print("Init")
-        return
     
     if "error" in data:
         print("Error:", data["error"])
@@ -69,39 +59,38 @@ def on_response(data):
 @sio.on("end")
 def on_end(data):
     global game_end
-    print("[GAME END]", data)
+    recorder.write("[GAME END] " + str(data), debug=DEBUG)
     game_end = True
 
 def main():    
+    global game_over, action_mode
+    global recorder
+    # 创建记录器实例
+    recorder = GameRecorder(GAME_ID)
+
     while True:
         try:
             sio.connect(SERVER_URL)
             break 
         except socketio.exceptions.ConnectionError:
-            print("Connection failed. Retrying...")
+            recorder.write("Connection failed. Retrying...", debug=True)
             time.sleep(3)
 
-    global game_over, action_mode
-    global recorder
-    # 创建记录器实例
-    recorder = GameRecorder(GAME_ID)
     while not game_end:
         # 等待接收服务器的信息
-
         if not response_event.wait(timeout=1):
             continue
         response_event.clear() 
         resp = response_data
-        print(resp)
-
-        print(f"Round: {resp['i_round']}, Coins: {resp['n_coins']}")
+        # recorder.write("[SERVER RESPONSE] " + str(resp), debug=DEBUG)
+        recorder.write(f"Round: {resp['i_round']}, Coins: {resp['n_coins']}", debug=DEBUG)
         if 'store' in resp:
-            print("Store:", resp["store"])
+            recorder.write("Store: " + str(resp["store"]), debug=DEBUG)
         if resp.get("start_round"):
-            print("** New round started **")
+            recorder.write("** New round started **", debug=DEBUG)
         if resp.get("game_over"):
             game_over = True
-            print("** Game Over **")
+            recorder.write("** Game Over **", debug=DEBUG)
 
         if 'game_over' in resp and resp['game_over']:
             game_over = True
@@ -166,8 +155,7 @@ def main():
             continue
 
         if not game_over:
-            recorder.write("User Action: ")
-            recorder.write(action)  # 记录客户端动作
+            recorder.write("User Action: " + str(action), debug=DEBUG)
             sio.emit("action", action)
 
         time.sleep(0.1)
