@@ -11,7 +11,7 @@ from game_recorder import GameRecorder
 
 response_event = threading.Event()
 response_data = None
-DEBUG = True
+DEBUG = False
 # ====== 配置 ======
 SERVER_URL = "http://117.186.102.78:32500/"
 TEAM_ID = open("team_id").readlines()[0].strip()
@@ -60,13 +60,16 @@ def on_response(data):
 def on_end(data):
     global game_end
     recorder.write("[GAME END] " + str(data), debug=DEBUG)
+    if RECORD_DIR != "records": # batch mode
+        with open(f"{RECORD_DIR}/score.csv", "a", encoding="utf-8") as f:
+            f.write(f"{GAME_ID},{data.get('score_pred','')},{data.get('score_game','')}\n")
     game_end = True
 
 def main():    
     global game_over, action_mode
     global recorder
     # 创建记录器实例
-    recorder = GameRecorder(GAME_ID)
+    recorder = GameRecorder(GAME_ID, RECORD_DIR)
 
     while True:
         try:
@@ -171,6 +174,7 @@ if __name__ == "__main__":
     parser.add_argument("--game_id", default=0, type=int) # 设置玩的游戏
     parser.add_argument("--action_mode", default='auto', type=str)
     parser.add_argument("--server_url", default=None, type=str)
+    parser.add_argument("--record_dir", default="records", type=str)
     args = parser.parse_args()
 
     if args.team_id:
@@ -180,6 +184,7 @@ if __name__ == "__main__":
     if args.server_url:
         SERVER_URL = args.server_url
     action_mode = args.action_mode
+    RECORD_DIR = args.record_dir
 
     main()
 
