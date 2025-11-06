@@ -11,7 +11,7 @@ from game_recorder import GameRecorder
 
 response_event = threading.Event()
 response_data = None
-DEBUG = False
+DEBUG = True
 # ====== 配置 ======
 SERVER_URL = "http://117.186.102.78:32500/"
 TEAM_ID = open("team_id").readlines()[0].strip()
@@ -96,8 +96,13 @@ def main():
             if "enemy_description" in resp:
                 recorder.write(f"Enemy Description: {resp['enemy_description']}", debug=DEBUG)
             recorder.write(f"Coins: {resp.get('n_coins', '?')}", debug=DEBUG)
-            recorder.write("==============================", debug=DEBUG)
         else:
+            if 'towers_list' in resp:
+                recorder.write(f"Towers: {resp['towers_list']}", debug=DEBUG)
+                if 'map' in resp:
+                    recorder.write(f"Map: {resp['map']['map']}", debug=DEBUG)
+                    recorder.write(f"Placement Options: {resp['map']['extra']}", debug=DEBUG)
+                    recorder.write("==============================", debug=DEBUG)
             recorder.write(f"Coins: {resp['n_coins']}", debug=DEBUG)
             if 'store' in resp:
                 recorder.write("Store: " + str(resp["store"]), debug=DEBUG)

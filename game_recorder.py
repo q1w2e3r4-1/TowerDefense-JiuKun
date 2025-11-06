@@ -3,7 +3,7 @@ class GameRecorder:
         from datetime import datetime
         now = datetime.now()
         date_str = now.strftime("%m%d_%H%M")
-        self.filename = f"{record_dir}/game_id_{game_id}_{date_str}.record"
+        self.filename = f"{record_dir}/{date_str}_game_{game_id}.record"
         self.file = open(self.filename, "w", encoding="utf-8")
 
     def write(self, content, debug=False):
