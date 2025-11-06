@@ -10,5 +10,5 @@ score_csv_path = os.path.join(record_dir, 'score.csv')
 with open(score_csv_path, 'w', encoding='utf-8') as f:
     f.write('game_id,score_pred,score_game\n')
 
-for gid in range(5):
+for gid in range(100):
     os.system(f'python client.py  --action auto --game_id {gid} --record_dir {record_dir}')
