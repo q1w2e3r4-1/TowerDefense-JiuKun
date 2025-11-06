@@ -7,6 +7,7 @@ import threading
 import numpy as np
 import argparse
 import random
+from game_info import GameInfo, EnemyInfo, TowerInfo
 from game_recorder import GameRecorder
 
 response_event = threading.Event()
@@ -70,6 +71,8 @@ def main():
     global recorder
     # 创建记录器实例
     recorder = GameRecorder(GAME_ID, RECORD_DIR)
+    # 创建游戏信息实例
+    game_info = GameInfo()
 
     while True:
         try:
@@ -86,7 +89,7 @@ def main():
         response_event.clear()
         resp = response_data
 
-        # 每轮开始时打印重要信息
+        # 更新游戏信息
         if resp.get("start_round"):
             recorder.write("\n\n\n\n==============================", debug=DEBUG)
             round_num = resp.get("i_round", "?")
@@ -96,6 +99,22 @@ def main():
             if "enemy_description" in resp:
                 recorder.write(f"Enemy Description: {resp['enemy_description']}", debug=DEBUG)
             recorder.write(f"Coins: {resp.get('n_coins', '?')}", debug=DEBUG)
+            # 更新game_info
+            game_info.set_round(resp.get("i_round", 0))
+            if "enemy_name" in resp or "enemy_description" in resp:
+                enemy = EnemyInfo(
+                    name=resp.get("enemy_name", ""),
+                    description=resp.get("enemy_description", ""),
+                    weak=resp.get("weak", []),
+                    resist=resp.get("resist", []),
+                    special_eff=resp.get("special_eff", []),
+                    slow_eff=resp.get("slow_eff", []),
+                    occurrence=resp.get("occurrence", [])
+                )
+                game_info.add_enemy(enemy)
+            game_info.set_coins(resp.get("n_coins", 0))
+            if 'store' in resp:
+                game_info.update_store(resp['store'])
         else:
             if 'towers_list' in resp:
                 recorder.write(f"Towers: {resp['towers_list']}", debug=DEBUG)
@@ -103,10 +122,19 @@ def main():
                     recorder.write(f"Map: {resp['map']['map']}", debug=DEBUG)
                     recorder.write(f"Placement Options: {resp['map']['extra']}", debug=DEBUG)
                     recorder.write("==============================", debug=DEBUG)
+                    game_info.set_map(resp['map'].get('map', []))
+                    game_info.set_placement_options(resp['map'].get('extra', []))
+                # 填充已放置塔信息
+                game_info.towers = []
+                for tower in resp['towers_list']:
+                    attrs = dict(tower)
+                    game_info.add_tower(TowerInfo(attrs))
             recorder.write(f"Coins: {resp['n_coins']}", debug=DEBUG)
+            game_info.set_coins(resp.get('n_coins', 0))
             if 'store' in resp:
                 recorder.write("Store: " + str(resp["store"]), debug=DEBUG)
-
+                game_info.update_store(resp['store'])
+                
         if resp.get("game_over"):
             game_over = True
             recorder.write("** Game Over **", debug=DEBUG)
