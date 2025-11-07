@@ -8,12 +8,14 @@ import numpy as np
 import argparse
 import random
 import traceback
+
 from game_info import GameInfo, EnemyInfo, TowerInfo
 from game_recorder import GameRecorder
+from strategy import Strategy
 
 response_event = threading.Event()
 response_data = None
-DEBUG = True
+DEBUG = False
 # ====== 配置 ======
 SERVER_URL = "http://117.186.102.78:32500/"
 TEAM_ID = open("team_id").readlines()[0].strip()
@@ -33,6 +35,7 @@ game_end = False
 action_mode = 'input'
 
 recorder = None
+strategy = Strategy()
 game_info = GameInfo()
 
 @sio.event
@@ -70,16 +73,17 @@ def on_end(data):
     game_end = True
 
 def main_loop():
+    global strategy
     global game_over, action_mode
     global recorder, game_info
+    assert recorder is not None
 
     while not game_end:
         # 等待接收服务器的信息
         if not response_event.wait(timeout=1):
             continue
         response_event.clear()
-        resp = response_data
-
+        resp: dict = response_data
         # 更新游戏信息
         if resp.get("start_round"):
             recorder.write("\n\n\n\n==============================", debug=DEBUG)
@@ -150,20 +154,17 @@ def main_loop():
                     cmd = input("\nEnter action ('refresh' or 'buy item_idx bag_idx' or 'end'): ").strip()
             else:
                 # ====== TODO_strategy: 下面可以改成自己的代码，用于处理决策
-                if 'towers_list' in resp and 'map' in resp: # 第一轮开始
-                    n_bag = len(resp['map']['extra'])
-                if 'towers_list' in resp : # 每一轮开始
-                    i_bag = 0
-                if resp['n_coins'] < 10 or i_bag >= n_bag:
-                    cmd = 'end'
-                    i_bag = 0
-                else:
-                    p = random.uniform(0,1)
-                    if p < 0.5:
-                        cmd = 'refresh'
-                    else:
-                        cmd = f"buy {random.randint(0, len(resp['store'])-1)} {i_bag}"
-                        i_bag += 1
+                if 'map' in resp:
+                    game_info.set_map(resp['map']['map'])
+                    game_info.set_placement_options(resp['map']['extra'])
+                if 'towers_list' in resp:
+                    game_info.towers = [TowerInfo(dict(tower)) for tower in resp['towers_list']]
+                game_info.update_store(resp['store'])
+                game_info.coins = resp['n_coins']
+                if 'start_round' in resp:
+                    print('Starting new round, reset strategy')
+                    strategy = Strategy()
+                cmd = strategy.get_action(EnemyInfo(name='', description='', **label_pred), game_info)
                 # ====== 上面可以改成自己的代码，用于处理决策
 
         if cmd.lower() == "refresh":
@@ -194,8 +195,9 @@ def main_loop():
                         tower.attributes[k] = v
                 tower.attributes["position"] = int(bag_idx)
                 game_info.set_placed_tower_item(int(bag_idx), tower)
-            except Exception:
-                print("Invalid buy command. Example: buy 0 1")
+            except Exception as e:
+                traceback.print_exc()
+                print(f"Invalid buy command {cmd}. Example: buy 0 1")
                 continue
         else:
             print("Unknown command")
@@ -204,6 +206,7 @@ def main_loop():
         if not game_over:
             recorder.write("[User Action] " + str(action), debug=DEBUG)
             sio.emit("action", action)
+            # game_info.print_placed_towers()
 
 def main():    
     global game_over, action_mode
