@@ -209,3 +209,4 @@ __marimo__/
 records/
 data/
 record_*/
+*.out
