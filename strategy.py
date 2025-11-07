@@ -47,6 +47,8 @@ class Strategy:
             dx, dy = x2 - x1, y2 - y1
             return sqrt(dx ** 2 + dy ** 2)
         elif len(intersections) == 1:
+            if not point_in_circle(p1, center, radius) and not point_in_circle(p2, center, radius):
+                return 0.0
             if point_in_circle(p1, center, radius):
                 x1, y1 = p1
             else:
