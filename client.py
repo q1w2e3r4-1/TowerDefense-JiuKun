@@ -53,6 +53,8 @@ def on_response(data):
     if "error" in data:
         print("Error:", data["error"])
         return
+    
+    # print(data)
 
     response_data = data
     response_event.set()
@@ -105,6 +107,7 @@ def main():
                 enemy = EnemyInfo(
                     name=resp.get("enemy_name", ""),
                     description=resp.get("enemy_description", ""),
+                    best_atk_spd=resp.get("best_atk_spd", []),
                     weak=resp.get("weak", []),
                     resist=resp.get("resist", []),
                     special_eff=resp.get("special_eff", []),
@@ -136,6 +139,7 @@ def main():
                 game_info.update_store(resp['store'])
                 
         if resp.get("game_over"):
+            game_info.debug_print()
             game_over = True
             recorder.write("** Game Over **", debug=DEBUG)
 
@@ -179,6 +183,15 @@ def main():
             action = {"type": "end"}
         elif cmd.lower() == "predict":
             action = {"type": "predict", "label_pred": label_pred}
+            game_info.update_enemy(
+                name=resp.get("enemy_name", ""),
+                best_atk_spd=label_pred.get('best_atk_spd', None),
+                weak=label_pred.get('weak', None),
+                resist=label_pred.get('resist', None),
+                special_eff=label_pred.get('special_eff', None),
+                slow_eff=label_pred.get('slow_eff', None),
+                occurrence=label_pred.get('occurrence', None)
+            )
         elif cmd.lower().startswith("buy"):
             try:
                 _, item_idx, bag_idx = cmd.split()
