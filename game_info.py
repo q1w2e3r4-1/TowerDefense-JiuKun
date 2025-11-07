@@ -1,3 +1,5 @@
+import copy
+
 class EnemyInfo:
     def __init__(self, name, description, weak=None, resist=None, special_eff=None, slow_eff=None, occurrence=None, best_atk_spd=None):
         self.name = name
@@ -19,9 +21,13 @@ class GameInfo:
         self.map = []  # List of map points, e.g. [[x, y], ...]
         self.placement_options = []  # 可放置塔的位置 List[[x, y], ...]
         self.towers = []  # List[TowerInfo]
+        self.placed_towers = []  # List[TowerInfo or None], 长度与placement_options一致
         self.coins = 0
         self.store = []  # 当前商店内容 List[dict]
         self.round = 0
+
+    def print_placed_towers(self):
+        pass # 打印能让模拟器看懂的格式
 
     def debug_print(self):
         print("\n\n\n")
@@ -44,12 +50,13 @@ class GameInfo:
         print(f"Towers(len = {len(self.towers)}):")
         for i, t in enumerate(self.towers):
             print(f"  [{i}] Attributes: {t.attributes}")
+        print(f"Placed Towers(len = {len(self.placed_towers)}):")
+        for i, t in enumerate(self.placed_towers):
+            if t is None:
+                print(f"  [{i}] null")
+            else:
+                print(f"  [{i}] Attributes: {t.attributes}")
         print("========== Game Info ends ==========\n\n\n")
-
-    def get_tower_by_idx(self, idx):
-        if 0 <= idx < len(self.towers):
-            return self.towers[idx]
-        return None
 
     def add_enemy(self, enemy: EnemyInfo):
         self.enemies[enemy.name] = enemy
@@ -81,9 +88,34 @@ class GameInfo:
 
     def set_placement_options(self, options):
         self.placement_options = options
+        self.placed_towers = [None] * len(options)
 
     def set_coins(self, coins):
         self.coins = coins
 
     def set_round(self, round_num):
         self.round = round_num
+
+    def get_placement_option_item(self, idx):
+        if 0 <= idx < len(self.placement_options):
+            return self.placement_options[idx]
+        return None
+
+    def get_tower_item(self, idx) -> TowerInfo:
+        if 0 <= idx < len(self.towers):
+            return copy.deepcopy(self.towers[idx])
+        return None
+
+    def get_placed_tower_item(self, idx):
+        if 0 <= idx < len(self.placed_towers):
+            return copy.deepcopy(self.placed_towers[idx])
+        return None
+
+    def set_placed_tower_item(self, idx, tower):
+        if 0 <= idx < len(self.placed_towers):
+            self.placed_towers[idx] = tower
+    
+    def get_store_item(self, idx):
+        if 0 <= idx < len(self.store):
+            return copy.deepcopy(self.store[idx])
+        return None

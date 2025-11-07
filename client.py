@@ -7,6 +7,7 @@ import threading
 import numpy as np
 import argparse
 import random
+import traceback
 from game_info import GameInfo, EnemyInfo, TowerInfo
 from game_recorder import GameRecorder
 
@@ -31,8 +32,8 @@ game_end = False
 
 action_mode = 'input'
 
-# 初始化记录器
 recorder = None
+game_info = GameInfo()
 
 @sio.event
 def connect():
@@ -68,21 +69,9 @@ def on_end(data):
             f.write(f"{GAME_ID},{data.get('score_pred','')},{data.get('score_game','')}\n")
     game_end = True
 
-def main():    
+def main_loop():
     global game_over, action_mode
-    global recorder
-    # 创建记录器实例
-    recorder = GameRecorder(GAME_ID, RECORD_DIR)
-    # 创建游戏信息实例
-    game_info = GameInfo()
-
-    while True:
-        try:
-            sio.connect(SERVER_URL)
-            break 
-        except socketio.exceptions.ConnectionError:
-            recorder.write("Connection failed. Retrying...", debug=True)
-            time.sleep(3)
+    global recorder, game_info
 
     while not game_end:
         # 等待接收服务器的信息
@@ -137,7 +126,7 @@ def main():
             if 'store' in resp:
                 recorder.write("Store: " + str(resp["store"]), debug=DEBUG)
                 game_info.update_store(resp['store'])
-                
+        
         if resp.get("game_over"):
             game_info.debug_print()
             game_over = True
@@ -196,6 +185,15 @@ def main():
             try:
                 _, item_idx, bag_idx = cmd.split()
                 action = {"type": "buy", "item_idx": int(item_idx), "bag_idx": int(bag_idx)}
+                item = game_info.get_store_item(int(item_idx))
+                tower_idx = item.get('type', 0)
+                tower = game_info.get_tower_item(tower_idx)
+
+                for k, v in item.items():
+                    if k != 'type':
+                        tower.attributes[k] = v
+                tower.attributes["position"] = int(bag_idx)
+                game_info.set_placed_tower_item(int(bag_idx), tower)
             except Exception:
                 print("Invalid buy command. Example: buy 0 1")
                 continue
@@ -207,7 +205,26 @@ def main():
             recorder.write("[User Action] " + str(action), debug=DEBUG)
             sio.emit("action", action)
 
-        time.sleep(0.1)
+def main():    
+    global game_over, action_mode
+    global recorder
+    # 创建记录器实例
+    recorder = GameRecorder(GAME_ID, RECORD_DIR)
+    
+    while True:
+        try:
+            sio.connect(SERVER_URL)
+            break 
+        except socketio.exceptions.ConnectionError:
+            recorder.write("Connection failed. Retrying...", debug=True)
+            time.sleep(3)
+  
+    try:
+        main_loop()
+    except Exception as e:
+        print(f"Exception occurred: {e}")
+        traceback.print_exc()
+        sio.disconnect()
 
     print("Client terminated")
     if recorder:
