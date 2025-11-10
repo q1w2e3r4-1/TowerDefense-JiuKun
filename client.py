@@ -12,6 +12,7 @@ import traceback
 from game_info import GameInfo, EnemyInfo, TowerInfo
 from game_recorder import GameRecorder
 from strategy import Strategy
+from predictor import Predictor, DummyPredictor, VLLMServer
 
 response_event = threading.Event()
 response_data = None
@@ -37,6 +38,7 @@ action_mode = 'input'
 recorder = None
 strategy = Strategy()
 game_info = GameInfo()
+predictor = Predictor()
 
 @sio.event
 def connect():
@@ -138,16 +140,12 @@ def main_loop():
 
         if 'enemy_description' in resp:
             cmd = 'predict'
-            # ====== TODO_pred: 下面可以改成自己的代码，用于提交预测结果
-            label_pred = {
-                'best_atk_spd': ['Normal'],
-                'weak': ['Fire', 'Ice', 'Poison'],
-                'resist': ['Blunt', 'Lightning'],
-                'special_eff': ['Fire'],
-                'slow_eff': ['Normal'],
-                'occurrence': ['Triple'],
-            }
-            # ====== 上面可以改成自己的代码，用于提交预测结果
+            label_pred_str = predictor.infer(
+                prompt=resp.get('enemy_description', ''),
+                game_id=GAME_ID,
+                round_id=game_info.round
+            )
+            label_pred = json.loads(label_pred_str)
         else:
             if action_mode == 'input':
                 if not game_over:
@@ -241,6 +239,7 @@ if __name__ == "__main__":
     parser.add_argument("--action_mode", default='auto', type=str)
     parser.add_argument("--server_url", default=None, type=str)
     parser.add_argument("--record_dir", default="records", type=str)
+    parser.add_argument("--label_dir", default=None, type=str, help="标准答案文件夹, 指定则用DummyPredictor")
     args = parser.parse_args()
 
     if args.team_id:
@@ -251,6 +250,13 @@ if __name__ == "__main__":
         SERVER_URL = args.server_url
     action_mode = args.action_mode
     RECORD_DIR = args.record_dir
+
+    # predictor选择逻辑
+    if args.label_dir:
+        predictor = DummyPredictor(answer_dir=args.label_dir)
+        print("Using answer labels")
+    else:
+        predictor = VLLMServer(model_path="/path/to/model")  # 需补充模型路径和参数
 
     main()
 

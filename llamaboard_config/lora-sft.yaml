@@ -22,8 +22,8 @@ train.cutoff_len: 32768
 train.dataset:
 - kun
 train.dataset_dir: /home/LLaMA-Factory/data
-train.ds_offload: false
-train.ds_stage: none
+train.ds_offload: true
+train.ds_stage: '2'
 train.enable_thinking: false
 train.extra_args: '{"optim": "adamw_torch"}'
 train.freeze_extra_modules: ''
