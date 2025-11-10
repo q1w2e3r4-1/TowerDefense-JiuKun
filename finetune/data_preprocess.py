@@ -3,12 +3,13 @@ import argparse
 import os
 import numpy as np
 import json
+from prompt import SYSTEM_PROMPT
 
-SYSTEM_PROMPT = """
-You are a strategic game analyst for a tower defense game that unfolds over multiple rounds. Information about future enemies may appear early, woven into the lore across 1 to 3 interconnected stories. Your job is to extract precise attributes for a specific monster—which will be named by the user—by analyzing all provided story passages as a single context.
-
-Given the target monster name and one or more narrative passages, carefully infer the following six attributes based only on explicit or strongly implied clues about that monster in any of the stories. Output your answer strictly in valid JSON format, with no additional text, explanation, or markdown.
-"""
+def concat_input(data, name):
+    ret: str = f"Monster Name: {name}\n"
+    ret += "Number of stories: 1\n"
+    ret += f"Story 1:\n{data}\n"
+    return ret
 
 def convert_to_llamafactory_jsonl(input_dir, output_dir, output_name="llamafactory.jsonl"):
     data_path = os.path.join(input_dir, "data.npy")
@@ -25,7 +26,7 @@ def convert_to_llamafactory_jsonl(input_dir, output_dir, output_name="llamafacto
         for d, n, l in zip(data, names, labels):
             item = {
                 "instruction": SYSTEM_PROMPT.strip(),
-                "input": str(d) + str(n),
+                "input": concat_input(n, d),
                 "output": str(l)
             }
             fout.write(json.dumps(item, ensure_ascii=False) + '\n')
@@ -42,3 +43,7 @@ if __name__ == '__main__':
     main()
     # python finetune/data_preprocess.py --input_dir /home/ws/data/game/train --output_dir /home/LLaMA-Factory/data --output_name kun.json
     # python finetune/data_preprocess.py --input_dir /home/ws/data/game/val --output_dir /home/LLaMA-Factory/data --output_name kun_val.json
+
+    # for debug
+    # python finetune/data_preprocess.py --input_dir /home/ws/data/game/train --output_dir /home/ws/data/game/train --output_name kun.json
+    # python finetune/data_preprocess.py --input_dir /home/ws/data/game/val --output_dir /home/ws/data/game/val --output_name kun_val.json
