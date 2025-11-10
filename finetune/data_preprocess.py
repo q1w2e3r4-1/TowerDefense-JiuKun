@@ -3,13 +3,7 @@ import argparse
 import os
 import numpy as np
 import json
-from prompt import SYSTEM_PROMPT
-
-def concat_input(data, name):
-    ret: str = f"Monster Name: {name}\n"
-    ret += "Number of stories: 1\n"
-    ret += f"Story 1:\n{data}\n"
-    return ret
+from prompt import SYSTEM_PROMPT, concat_input
 
 def convert_to_llamafactory_jsonl(input_dir, output_dir, output_name="llamafactory.jsonl"):
     data_path = os.path.join(input_dir, "data.npy")
@@ -26,7 +20,7 @@ def convert_to_llamafactory_jsonl(input_dir, output_dir, output_name="llamafacto
         for d, n, l in zip(data, names, labels):
             item = {
                 "instruction": SYSTEM_PROMPT.strip(),
-                "input": concat_input(n, d),
+                "input": concat_input(n, [d]),
                 "output": str(l)
             }
             fout.write(json.dumps(item, ensure_ascii=False) + '\n')
