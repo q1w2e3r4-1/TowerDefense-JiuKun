@@ -14,16 +14,31 @@ def convert_to_llamafactory_jsonl(input_dir, output_dir, output_name="llamafacto
     names = np.load(names_path, allow_pickle=True)
     labels = np.load(labels_path, allow_pickle=True)
     assert len(data) == len(names) == len(labels)
+    assert len(data) % 3 == 0, "data/labels/names长度必须为3的倍数"
     os.makedirs(output_dir, exist_ok=True)
     print(f"Converting {len(data)} samples to {output_path}")
     with open(output_path, 'w', encoding='utf-8') as fout:
-        for d, n, l in zip(data, names, labels):
-            item = {
+        for i in range(0, len(data), 3):
+            item1 = {
                 "instruction": SYSTEM_PROMPT.strip(),
-                "input": concat_input(n, [d]),
-                "output": str(l)
+                "input": concat_input(names[i], [data[i]]),
+                "output": str(labels[i])
             }
-            fout.write(json.dumps(item, ensure_ascii=False) + '\n')
+            fout.write(json.dumps(item1, ensure_ascii=False) + '\n')
+
+            item2 = {
+                "instruction": SYSTEM_PROMPT.strip(),
+                "input": concat_input(names[i+1], [data[i], data[i+1]]),
+                "output": str(labels[i+1])
+            }
+            fout.write(json.dumps(item2, ensure_ascii=False) + '\n')
+
+            item3 = {
+                "instruction": SYSTEM_PROMPT.strip(),
+                "input": concat_input(names[i+2], [data[i], data[i+1], data[i+2]]),
+                "output": str(labels[i+2])
+            }
+            fout.write(json.dumps(item3, ensure_ascii=False) + '\n')
 
 def main():
     parser = argparse.ArgumentParser()

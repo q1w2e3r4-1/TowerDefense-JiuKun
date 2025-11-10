@@ -210,3 +210,4 @@ records/
 data/
 record_*/
 *.out
+llamaboard_cache/
