@@ -53,20 +53,21 @@ def compare_score_csv(dir_new, dir_old):
     all_gids = set(scores_new.keys()) | set(scores_old.keys())
     print(f"对比 {dir_new}/score.csv 与 {dir_old}/score.csv")
     print(f"共计对局: {len(all_gids)}")
-    print(f"game_id | new_pred | old_pred | Δpred | new_game | old_game | Δgame | 状态")
-    print("-"*80)
+    print(f"game_id | new_pred | old_pred | Δpred | 状态_pred | new_game | old_game | Δgame | 状态_game")
+    print("-"*100)
     for gid in sorted(all_gids, key=lambda x: int(x)):
         n = scores_new.get(gid)
         o = scores_old.get(gid)
         if n and o:
             delta_pred = n['score_pred'] - o['score_pred']
             delta_game = n['score_game'] - o['score_game']
-            status = "提升" if delta_game > 0 else ("下降" if delta_game < 0 else "持平")
-            print(f"{gid:>7} | {n['score_pred']:^8.2f} | {o['score_pred']:^8.2f} | {delta_pred:^6.2f} | {n['score_game']:^8.2f} | {o['score_game']:^8.2f} | {delta_game:^6.2f} | {status}")
+            status_pred = "提升" if delta_pred > 0 else ("下降" if delta_pred < 0 else "持平")
+            status_game = "提升" if delta_game > 0 else ("下降" if delta_game < 0 else "持平")
+            print(f"{gid:>7} | {n['score_pred']:^8.2f} | {o['score_pred']:^8.2f} | {delta_pred:^6.2f} | {status_pred:^8} | {n['score_game']:^8.2f} | {o['score_game']:^8.2f} | {delta_game:^6.2f} | {status_game:^8}")
         elif n and not o:
-            print(f"{gid:>7} | {n['score_pred']:^8.2f} | {'-':^8} | {'-':^6} | {n['score_game']:^8.2f} | {'-':^8} | {'-':^6} | 新增")
+            print(f"{gid:>7} | {n['score_pred']:^8.2f} | {'-':^8} | {'-':^6} | {'新增':^8} | {n['score_game']:^8.2f} | {'-':^8} | {'-':^6} | {'新增':^8}")
         elif o and not n:
-            print(f"{gid:>7} | {'-':^8} | {o['score_pred']:^8.2f} | {'-':^6} | {'-':^8} | {o['score_game']:^8.2f} | {'-':^6} | 移除")
+            print(f"{gid:>7} | {'-':^8} | {o['score_pred']:^8.2f} | {'-':^6} | {'移除':^8} | {'-':^8} | {o['score_game']:^8.2f} | {'-':^6} | {'移除':^8}")
 
 if __name__ == "__main__":
     if len(sys.argv) == 2:

@@ -12,5 +12,5 @@ with open(score_csv_path, 'w', encoding='utf-8') as f:
 
 for gid in range(100):
     print(f'Running game_id: {gid}')
-    os.system(f'python client.py  --action auto --game_id {gid} --record_dir {record_dir}')
-    # os.system(f'python client.py  --action auto --game_id {gid} --record_dir {record_dir} --label_dir ./data/game/val')
+    # os.system(f'python client.py  --action auto --game_id {gid} --record_dir {record_dir}')
+    os.system(f'python client.py  --action auto --game_id {gid} --record_dir {record_dir} --label_dir ./data/game/val')

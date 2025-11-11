@@ -60,5 +60,5 @@ if __name__ == "__main__":
     game_ids = [0, 0, 0]
     round_ids = [1, 2, 3]
     vllm = LLMPredictor()
-    dummy = DummyPredictor(answer_dir="/path/to/label_dir")
+    dummy = DummyPredictor(answer_dir="data/game/val")
     batch_eval(vllm, dummy, prompts, game_ids, round_ids, predict_dir)
