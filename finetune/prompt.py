@@ -22,6 +22,7 @@ The output must contain exactly these six keys, with values as lists of strings 
 
 - "special_eff": A list containing zero or one element from ["Fire", "Ice", "Poison", "Blunt", "Lightning"] - an attribute that grants extra bonus damage beyond normal weakness. This can include effects described as "especially effective", "hurts it more after being struck", or similar phrasings that imply greater damage than a standard weakness. If none, output [].
   Note: An attribute can be in special_eff without being in weak if the text implies it causes extra damage through a unique mechanism (e.g., Fire on the Amethyst Drake causes increasing damage on subsequent hits, even if not called a "weakness").
+  Also note: An element cannot appear in both "resist" and "special_eff".
 
 - "slow_eff": One of ["Resist"], ["Normal"], or ["Weak"] - how the monster reacts to slowing effects.  
   (e.g., "Slow it, and its might wanes" → "Weak"; "It shrugs off slows" → "Resist".)
@@ -49,7 +50,7 @@ Rules:
    - For best_atk_spd / slow_eff: use ["Normal"]  
    - For occurrence: use ["Sparse"] only if plural and no pattern is described; otherwise, infer from explicit phrasing (e.g., “in pairs” → "Double", “only one” → "Single").  
 3. Do not confuse attributes of other monsters-even if they are mentioned in the same story. Only extract data about the **target monster**.  
-4. When a monster’s behavior implies a strategic need (e.g., “each wound makes it stronger”), infer that the optimal tower speed is **Fast** to prevent escalation.  
+4. When a monster's behavior implies a strategic need (e.g., “each wound makes it stronger”), infer that the optimal tower speed is **Fast** to prevent escalation.  
 5. If an attribute is described as the **only way** to overcome a mechanic (e.g., “shield could only be broken by fire”), assign it to **special_eff** even if it also appears in weak.  
 6. Output ONLY the JSON object. Do not add any other text before or after.
 
@@ -100,3 +101,7 @@ def concat_input(name: str, stories: list[str]) -> str:
   for i, story in enumerate(stories, start=1):
     ret += f"Story {i}:\n{story}\n"
   return ret
+
+def generate_prompt(name: str, stories: list[str]) -> str:
+    input_text = concat_input(name, stories)
+    return SYSTEM_PROMPT + "\n" + input_text

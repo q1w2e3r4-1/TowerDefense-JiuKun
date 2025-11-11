@@ -4,9 +4,8 @@ import json
 DEBUG = False
 
 class EnemyInfo:
-    def __init__(self, name, description, weak=None, resist=None, special_eff=None, slow_eff=None, occurrence=None, best_atk_spd=None):
+    def __init__(self, name, weak=None, resist=None, special_eff=None, slow_eff=None, occurrence=None, best_atk_spd=None):
         self.name = name
-        self.description = description
         self.best_atk_spd = best_atk_spd or []
         self.weak = weak or []
         self.resist = resist or []
@@ -28,6 +27,7 @@ class GameInfo:
         self.coins = 0
         self.store: list[dict] = []  # 当前商店内容
         self.round = 0
+        self.stories: list[str] = []
 
     def print_placed_towers(self):
         # 打印能让模拟器看懂的格式
@@ -45,7 +45,6 @@ class GameInfo:
             print(f"Enemies(len = {len(self.enemies)}):")
             for i, (name, e) in enumerate(self.enemies.items()):
                 print(f"  [{i}] Name: {name}")
-                print(f"      Desc: {e.description}")
                 print(f"      Best Atk Spd: {e.best_atk_spd}")
                 print(f"      Weak: {e.weak}")
                 print(f"      Resist: {e.resist}")

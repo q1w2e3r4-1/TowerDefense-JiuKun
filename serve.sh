@@ -1,5 +1,6 @@
 #!/bin/bash
 # 启动vllm服务的脚本
+set -x
 MODEL_PATH="$1"
 PORT=8000
 HOST=127.0.0.1
@@ -10,4 +11,4 @@ if [ -z "$MODEL_PATH" ]; then
   exit 1
 fi
 
-vllm serve --model "$MODEL_PATH" --port "$PORT" --host "$HOST" --max-model-len 32768 $EXTRA_ARGS
+vllm serve "$MODEL_PATH" --port "$PORT" --host "$HOST" --max-model-len 65536 $EXTRA_ARGS

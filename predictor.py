@@ -16,13 +16,27 @@ class LLMPredictor(Predictor):
         self.host = host
         self.extra_args = extra_args or []
         self._wait_until_ready()
+        # 查询/v1/models获取model名称
+        url = f"http://{self.host}:{self.port}/v1/models"
+        try:
+            resp = requests.get(url, timeout=5)
+            resp.raise_for_status()
+            models = resp.json().get("data", [])
+            if models and "id" in models[0]:
+                self.model_name = models[0]["id"]
+                print(f"Auto-detected model name: {self.model_name}")
+            else:
+                raise RuntimeError("No model id found in /v1/models response.")
+        except Exception as e:
+            print(f"Failed to get model name from /v1/models: {e}")
+            self.model_name = None
 
     def _wait_until_ready(self, timeout=60):
-        url = f"http://{self.host}:{self.port}/v1/completions"
+        url = f"http://{self.host}:{self.port}/health"
         for _ in range(timeout):
             try:
-                resp = requests.post(url, timeout=2)
-                if resp.status_code in (400, 200):
+                resp = requests.get(url, timeout=2)
+                if resp.status_code == 200:
                     print("LLM server is ready.")
                     return
             except Exception:
@@ -30,17 +44,26 @@ class LLMPredictor(Predictor):
         raise RuntimeError("LLM server did not start in time.")
 
     def infer(self, prompt, **kargs) -> str:
-        url = f"http://{self.host}:{self.port}/v1/completions"
+        url = f"http://{self.host}:{self.port}/v1/chat/completions"
+        if not self.model_name:
+            raise RuntimeError("Model name not set. Cannot call chat/completions.")
         payload = {
-            "prompt": prompt,
-            "max_tokens": kargs.get("max_tokens", 65536),
+            "model": self.model_name,
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": kargs.get("max_tokens", 8192),
             "temperature": kargs.get("temperature", 0.7)
         }
         checker = MonsterAttributeChecker()
         for attempt in range(3):
             resp = requests.post(url, json=payload)
             resp.raise_for_status()
-            result_text = resp.json()["choices"][0]["text"]
+            result = resp.json()["choices"][0]
+            # chat/completions接口返回的是message.content
+            result_text = result["message"]["content"] if "message" in result else result.get("text", "")
+            result_text = result_text.replace("'", '"')
             ok, msg = checker.check(result_text)
             if ok:
                 return result_text

@@ -6,7 +6,6 @@ class MonsterAttributeChecker:
     ELEMENTS = {"Fire", "Ice", "Poison", "Blunt", "Lightning"}
     SLOW_EFF = {"Resist", "Normal", "Weak"}
     OCCURRENCE = {"Single", "Double", "Triple", "Sparse", "Dense"}
-
     REQUIRED_KEYS = [
         "best_atk_spd", "weak", "resist", "special_eff", "slow_eff", "occurrence"
     ]
@@ -14,6 +13,7 @@ class MonsterAttributeChecker:
     def check(self, result):
         # 支持字符串和字典输入
         if isinstance(result, str):
+            # 替换所有单引号为双引号，便于解析
             try:
                 result = json.loads(result)
             except Exception:

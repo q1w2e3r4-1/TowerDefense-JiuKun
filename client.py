@@ -13,6 +13,7 @@ from game_info import GameInfo, EnemyInfo, TowerInfo
 from game_recorder import GameRecorder
 from strategy import Strategy
 from predictor import Predictor, DummyPredictor, LLMPredictor
+from finetune.prompt import generate_prompt
 
 response_event = threading.Event()
 response_data = None
@@ -101,7 +102,6 @@ def main_loop():
             if "enemy_name" in resp or "enemy_description" in resp:
                 enemy = EnemyInfo(
                     name=resp.get("enemy_name", ""),
-                    description=resp.get("enemy_description", ""),
                     best_atk_spd=resp.get("best_atk_spd", []),
                     weak=resp.get("weak", []),
                     resist=resp.get("resist", []),
@@ -139,9 +139,10 @@ def main_loop():
             recorder.write("** Game Over **", debug=DEBUG)
 
         if 'enemy_description' in resp:
+            game_info.stories.append(resp['enemy_description'])
             cmd = 'predict'
             label_pred_str = predictor.infer(
-                prompt=resp.get('enemy_description', ''),
+                prompt=generate_prompt(resp.get("enemy_name", ""), game_info.stories),
                 game_id=GAME_ID,
                 round_id=game_info.round
             )
@@ -162,7 +163,7 @@ def main_loop():
                 if 'start_round' in resp:
                     print('Starting new round, reset strategy')
                     strategy = Strategy()
-                cmd = strategy.get_action(EnemyInfo(name='', description='', **label_pred), game_info)
+                cmd = strategy.get_action(EnemyInfo(name='', **label_pred), game_info)
                 # ====== 上面可以改成自己的代码，用于处理决策
 
         if cmd.lower() == "refresh":
