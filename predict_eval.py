@@ -1,6 +1,6 @@
 import json
 import os
-from predictor import VLLMServer, DummyPredictor
+from predictor import LLMPredictor, DummyPredictor
 from datetime import datetime
 now = datetime.now()
 date_str = now.strftime("%m%d_%H%M")
@@ -27,20 +27,20 @@ def score_game(pred_list, label_list):
         total += score_prediction(pred, label)['avg']
     return total  # 范围[0, 300]
 
-def compare_predictors(vllm: VLLMServer, dummy: DummyPredictor, prompt, game_id, round_id):
+def compare_predictors(vllm: LLMPredictor, dummy: DummyPredictor, prompt, game_id, round_id):
     vllm_result_str = vllm.infer(prompt, game_id=game_id, round_id=round_id)
     dummy_result_str = dummy.infer(prompt, game_id=game_id, round_id=round_id)
     vllm_result = json.loads(vllm_result_str)
     dummy_result = json.loads(dummy_result_str)
     scores = score_prediction(vllm_result, dummy_result)
-    print(f"VLLMServer预测: {vllm_result}")
+    print(f"LLMPredictor预测: {vllm_result}")
     print(f"DummyPredictor标答: {dummy_result}")
     print(f"各项得分: {scores}")
     return vllm_result, dummy_result, scores
 
 # 批量评测与结果保存
 
-def batch_eval(vllm: VLLMServer, dummy: DummyPredictor, prompts, game_ids, round_ids, out_dir):
+def batch_eval(vllm: LLMPredictor, dummy: DummyPredictor, prompts, game_ids, round_ids, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     result_path = os.path.join(out_dir, "predict_results.csv")
     score_path = os.path.join(out_dir, "predict_scores.csv")
@@ -59,6 +59,6 @@ if __name__ == "__main__":
     prompts = ["怪物描述1", "怪物描述2", "怪物描述3"]
     game_ids = [0, 0, 0]
     round_ids = [1, 2, 3]
-    vllm = VLLMServer(model_path="/path/to/model")
+    vllm = LLMPredictor()
     dummy = DummyPredictor(answer_dir="/path/to/label_dir")
     batch_eval(vllm, dummy, prompts, game_ids, round_ids, predict_dir)

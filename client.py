@@ -12,7 +12,7 @@ import traceback
 from game_info import GameInfo, EnemyInfo, TowerInfo
 from game_recorder import GameRecorder
 from strategy import Strategy
-from predictor import Predictor, DummyPredictor, VLLMServer
+from predictor import Predictor, DummyPredictor, LLMPredictor
 
 response_event = threading.Event()
 response_data = None
@@ -256,7 +256,7 @@ if __name__ == "__main__":
         predictor = DummyPredictor(answer_dir=args.label_dir)
         print("Using answer labels")
     else:
-        predictor = VLLMServer(model_path="/path/to/model")  # 需补充模型路径和参数
+        predictor = LLMPredictor()  # 需补充模型路径和参数
 
     main()
 

@@ -10,39 +10,24 @@ class Predictor:
     def infer(self, prompt, **kargs) -> str:
         raise NotImplementedError
     
-class VLLMServer(Predictor):
-    def __init__(self, model_path, port=8000, host="127.0.0.1", extra_args=None):
-        self.model_path = model_path
+class LLMPredictor(Predictor):
+    def __init__(self, port=8000, host="127.0.0.1", extra_args=None):
         self.port = port
         self.host = host
         self.extra_args = extra_args or []
-        self.process = None
-        self._start_server()
         self._wait_until_ready()
-
-    def _start_server(self):
-        cmd = [
-            "vllm", "serve",
-            "--model", self.model_path,
-            "--port", str(self.port),
-            "--host", self.host,
-            "--max-model-len", "32768"
-        ] + self.extra_args
-        self.process = subprocess.Popen(cmd)
-        print(f"Started vllm server on {self.host}:{self.port}")
 
     def _wait_until_ready(self, timeout=60):
         url = f"http://{self.host}:{self.port}/v1/completions"
         for _ in range(timeout):
             try:
-                # vllm server is ready when /v1/completions returns 400 (missing params)
                 resp = requests.post(url, timeout=2)
                 if resp.status_code in (400, 200):
-                    print("vllm server is ready.")
+                    print("LLM server is ready.")
                     return
             except Exception:
                 time.sleep(1)
-        raise RuntimeError("vllm server did not start in time.")
+        raise RuntimeError("LLM server did not start in time.")
 
     def infer(self, prompt, **kargs) -> str:
         url = f"http://{self.host}:{self.port}/v1/completions"
@@ -60,16 +45,10 @@ class VLLMServer(Predictor):
             if ok:
                 return result_text
             else:
-                print(f"[VLLMServer] Checker failed: {msg}. Retrying ({attempt+1}/3)...")
+                print(f"[LLMPredictor] Checker failed: {msg}. Retrying ({attempt+1}/3)...")
                 time.sleep(1)
-        # 最后一次也失败则返回错误
-        print(f"[VLLMServer] Checker failed after 3 attempts: {msg}")
+        print(f"[LLMPredictor] Checker failed after 3 attempts: {msg}")
         return None
-
-    def __del__(self):
-        if self.process:
-            self.process.terminate()
-            print("vllm server terminated.")
 
 class DummyPredictor(Predictor):
     def __init__(self, answer_dir):
