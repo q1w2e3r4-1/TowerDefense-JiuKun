@@ -209,5 +209,6 @@ __marimo__/
 records/
 data/
 record_*/
+predict_*/
 *.out
 llamaboard_cache/
