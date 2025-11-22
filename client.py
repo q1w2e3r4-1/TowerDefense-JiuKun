@@ -111,6 +111,7 @@ def main_loop():
                 )
                 game_info.add_enemy(enemy)
             game_info.set_coins(resp.get("n_coins", 0))
+            game_info.clear_placed_towers()
             if 'store' in resp:
                 game_info.update_store(resp['store'])
         else:
@@ -205,7 +206,7 @@ def main_loop():
         if not game_over:
             recorder.write("[User Action] " + str(action), debug=DEBUG)
             sio.emit("action", action)
-            # game_info.print_placed_towers()
+            recorder.write(game_info.get_placed_towers(), debug=DEBUG)
 
 def main():    
     global game_over, action_mode
