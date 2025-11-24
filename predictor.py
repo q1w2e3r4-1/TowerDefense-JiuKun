@@ -23,7 +23,20 @@ class LLMPredictor(Predictor):
             resp.raise_for_status()
             models = resp.json().get("data", [])
             if models and "id" in models[0]:
-                self.model_name = models[0]["id"]
+                lora_model = None
+                normal_model = None
+                for m in models:
+                    if "id" in m:
+                        if "lora" in m["id"].lower():
+                            lora_model = m["id"]
+                        if not normal_model:
+                            normal_model = m["id"]
+                if lora_model:
+                    self.model_name = lora_model
+                    print(f"Auto-detected lora model name: {self.model_name}")
+                elif normal_model:
+                    self.model_name = normal_model
+                    print(f"Auto-detected model name: {self.model_name}")
                 print(f"Auto-detected model name: {self.model_name}")
             else:
                 raise RuntimeError("No model id found in /v1/models response.")

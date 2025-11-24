@@ -52,7 +52,7 @@ train.max_grad_norm: '1.0'
 train.max_samples: '100000'
 train.neat_packing: false
 train.neftune_alpha: 0
-train.num_train_epochs: '2.0'
+train.num_train_epochs: '3.0'
 train.packing: false
 train.ppo_score_norm: false
 train.ppo_whiten_rewards: false
