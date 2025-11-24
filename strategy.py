@@ -1,5 +1,9 @@
 from game_info import EnemyInfo, TowerInfo, GameInfo
 
+PRE_REFRESH = 3
+EXPECT_THRESHOLD = 0.3
+
+# DEBUG_FILE = open('debug.log', 'w')
 class Strategy:
     @staticmethod
     def segment_length_in_circle(p1: tuple, p2: tuple, center: tuple, radius: float) -> float:
@@ -60,6 +64,8 @@ class Strategy:
 
     def __init__(self):
         self.refreshed = False
+        self.refresh_times = 0
+        self.edamages = []
 
     def get_edamages(self, atk, tower: TowerInfo, game: GameInfo):
         mul = atk
@@ -109,11 +115,22 @@ class Strategy:
         maxpl = -1
         for s in stores:
             r = self.get_edamages(game.store[s]['damage'], game.towers[game.store[s]['type']], game)
+            # DEBUG_FILE.write(f'Expected damage: max: {max(r)}\n')
+            # DEBUG_FILE.write(game.towers[game.store[s]['type']].attributes.__str__()+'\n')
+            # DEBUG_FILE.write(str(game.store[s])+'\n')
             if game.store[s]['cost'] <= game.coins and max(r) > max_edamage:
                 max_edamage = max(r)
                 maxid = s
                 maxpl = r.index(max(r))
+        # DEBUG_FILE.write(f'MAX {max_edamage}\n')
         self.refreshed = False
-        if maxid == -1:
+        self.edamages.append(max_edamage)
+        self.edamages.sort()
+        if maxid == -1 or self.refresh_times < PRE_REFRESH:
+            self.refresh_times += 1
+            return 'refresh'
+        if max_edamage < self.edamages[-1] * EXPECT_THRESHOLD:
+            self.edamages.pop(-1)
+            self.refresh_times += 1
             return 'refresh'
         return f"buy {maxid} {maxpl}"
