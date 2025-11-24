@@ -47,6 +47,9 @@ def compare_predictors(vllm: LLMPredictor, dummy: DummyPredictor, prompt, game_i
 def batch_eval(vllm: LLMPredictor, dummy: DummyPredictor, prompts, game_ids, round_ids, out_dir):
     global ERR_CNT
     os.makedirs(out_dir, exist_ok=True)
+    model_name = vllm.get_model_name()
+    with open(os.path.join(out_dir, "model_name.txt"), "w", encoding="utf-8") as f_model_name:
+        f_model_name.write(model_name if model_name else "Unknown Model")
     result_path = os.path.join(out_dir, "predict_results.csv")
     score_path = os.path.join(out_dir, "predict_scores.csv")
     with open(result_path, "w", encoding="utf-8") as f_res, open(score_path, "w", encoding="utf-8") as f_score:

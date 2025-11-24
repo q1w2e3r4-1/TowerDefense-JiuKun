@@ -37,13 +37,15 @@ class LLMPredictor(Predictor):
                 elif normal_model:
                     self.model_name = normal_model
                     print(f"Auto-detected model name: {self.model_name}")
-                print(f"Auto-detected model name: {self.model_name}")
             else:
                 raise RuntimeError("No model id found in /v1/models response.")
         except Exception as e:
             print(f"Failed to get model name from /v1/models: {e}")
             self.model_name = None
 
+    def get_model_name(self):
+        return self.model_name
+    
     def _wait_until_ready(self, timeout=60):
         url = f"http://{self.host}:{self.port}/health"
         for _ in range(timeout):
@@ -70,6 +72,7 @@ class LLMPredictor(Predictor):
             "temperature": kargs.get("temperature", 0.7)
         }
         checker = MonsterAttributeChecker()
+        fallback_ans = None
         for attempt in range(3):
             resp = requests.post(url, json=payload)
             resp.raise_for_status()
@@ -81,10 +84,15 @@ class LLMPredictor(Predictor):
             if ok:
                 return result_text
             else:
+                ok1, msg1 = checker.check(result_text, level=1)
+                if ok1:
+                    fallback_ans = result_text
                 print(f"[LLMPredictor] Checker failed: {msg}. Retrying ({attempt+1}/3)...")
                 time.sleep(1)
-        print(f"[LLMPredictor] Checker failed after 3 attempts: {msg}")
-        return None
+        print(f"[LLMPredictor] Checker failed after 3 attempts: {msg}, fallback to {fallback_ans}")
+        return fallback_ans
+    
+    
 
 class DummyPredictor(Predictor):
     def __init__(self, answer_dir):
