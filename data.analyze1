@@ -1,0 +1,62 @@
+// compare with SFT-4B
+Confusion Matrix for best_atk_spd:
+label/pred  Fast        Normal      Slow        
+Fast        17          76          28          
+Normal      8           345         7           
+Slow        5           19          95          
+Accuracy: 0.7617 (457/600)
+
+Per-class stats for best_atk_spd:
+Fast: TP=17, FP=13, FN=104, TN=466, Acc=0.8050, Precision=0.5667, Recall=0.1405, F1=0.2252
+Normal: TP=345, FP=95, FN=15, TN=145, Acc=0.8167, Precision=0.7841, Recall=0.9583, F1=0.8625
+Slow: TP=95, FP=35, FN=24, TN=446, Acc=0.9017, Precision=0.7308, Recall=0.7983, F1=0.7631
+
+Confusion Matrix for slow_eff:
+label/pred  Resist      Normal      Weak        
+Resist      109         9           8           
+Normal      4           341         7           
+Weak        6           59          57          
+Accuracy: 0.8450 (507/600)
+
+Per-class stats for slow_eff:
+Resist: TP=109, FP=10, FN=17, TN=464, Acc=0.9550, Precision=0.9160, Recall=0.8651, F1=0.8898
+Normal: TP=341, FP=68, FN=11, TN=180, Acc=0.8683, Precision=0.8337, Recall=0.9688, F1=0.8962
+Weak: TP=57, FP=15, FN=65, TN=463, Acc=0.8667, Precision=0.7917, Recall=0.4672, F1=0.5876
+
+Confusion Matrix for occurrence:
+label/pred  Single      Double      Triple      Sparse      Dense       
+Single      223         5           1           0           0           
+Double      2           81          2           2           2           
+Triple      1           0           76          2           2           
+Sparse      0           0           1           84          1           
+Dense       3           0           3           2           107         
+Accuracy: 0.9517 (571/600)
+
+Per-class stats for occurrence:
+Single: TP=223, FP=6, FN=6, TN=365, Acc=0.9800, Precision=0.9738, Recall=0.9738, F1=0.9738
+Double: TP=81, FP=5, FN=8, TN=506, Acc=0.9783, Precision=0.9419, Recall=0.9101, F1=0.9257
+Triple: TP=76, FP=7, FN=5, TN=512, Acc=0.9800, Precision=0.9157, Recall=0.9383, F1=0.9268
+Sparse: TP=84, FP=6, FN=2, TN=508, Acc=0.9867, Precision=0.9333, Recall=0.9767, F1=0.9545
+Dense: TP=107, FP=5, FN=8, TN=480, Acc=0.9783, Precision=0.9554, Recall=0.9304, F1=0.9427
+
+Element-wise confusion for weak:
+Fire: TP=173, FP=33, FN=25, TN=369, Acc=0.9033, Precision=0.8398, Recall=0.8737, F1=0.8564
+Ice: TP=153, FP=32, FN=28, TN=387, Acc=0.9000, Precision=0.8270, Recall=0.8453, F1=0.8361
+Poison: TP=153, FP=22, FN=31, TN=394, Acc=0.9117, Precision=0.8743, Recall=0.8315, F1=0.8524
+Blunt: TP=140, FP=37, FN=33, TN=390, Acc=0.8833, Precision=0.7910, Recall=0.8092, F1=0.8000
+Lightning: TP=149, FP=23, FN=25, TN=403, Acc=0.9200, Precision=0.8663, Recall=0.8563, F1=0.8613
+
+Element-wise confusion for resist:
+Fire: TP=124, FP=26, FN=33, TN=417, Acc=0.9017, Precision=0.8267, Recall=0.7898, F1=0.8078
+Ice: TP=143, FP=21, FN=45, TN=391, Acc=0.8900, Precision=0.8720, Recall=0.7606, F1=0.8125
+Poison: TP=168, FP=22, FN=20, TN=390, Acc=0.9300, Precision=0.8842, Recall=0.8936, F1=0.8889
+Blunt: TP=150, FP=37, FN=32, TN=381, Acc=0.8850, Precision=0.8021, Recall=0.8242, F1=0.8130
+Lightning: TP=169, FP=22, FN=23, TN=386, Acc=0.9250, Precision=0.8848, Recall=0.8802, F1=0.8825
+
+Element-wise confusion for special_eff:
+Fire: TP=74, FP=3, FN=10, TN=513, Acc=0.9783, Precision=0.9610, Recall=0.8810, F1=0.9193
+Ice: TP=60, FP=1, FN=9, TN=530, Acc=0.9833, Precision=0.9836, Recall=0.8696, F1=0.9231
+Poison: TP=58, FP=11, FN=9, TN=522, Acc=0.9667, Precision=0.8406, Recall=0.8657, F1=0.8529
+Blunt: TP=61, FP=3, FN=10, TN=526, Acc=0.9783, Precision=0.9531, Recall=0.8592, F1=0.9037
+Lightning: TP=64, FP=3, FN=8, TN=525, Acc=0.9817, Precision=0.9552, Recall=0.8889, F1=0.9209
+

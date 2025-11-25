@@ -2,7 +2,7 @@ import os
 import json
 from openai import OpenAI
 import numpy as np
-from finetune.prompt import generate_system_prompt
+from finetune.prompt import generate_reasoning_prompt
 CONTENT = '''
 You are a strategic game analyst for a tower defense game that unfolds over multiple rounds. Information about future enemies may appear early, woven into the lore across 1 to 3 interconnected stories. Your job is to extract precise attributes for a specific monster-which will be named by the user-by analyzing all provided story passages as a single, unified context.
 
@@ -111,13 +111,13 @@ client = OpenAI(
 
 def infer_max(content: str):
     completion = client.chat.completions.create(
-        model="qwen3-max",
+        model="qwen-plus",
         messages=[
             # {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": content},
         ],
         stream=False,
-        extra_body={"enable_thinking":True},
+        extra_body={"enable_thinking":False},
     )
 
     completion = json.loads(completion.model_dump_json())
@@ -211,25 +211,26 @@ def infer_max(content: str):
 #         "chunk_usage": token_usage
 #     }
 
-names = np.load("data/game/val/names.npy", allow_pickle=True)
-labels = np.load("data/game/val/labels.npy", allow_pickle=True)
-data = np.load("data/game/val/data.npy", allow_pickle=True)
+names = np.load("data/game/train/names.npy", allow_pickle=True)
+labels = np.load("data/game/train/labels.npy", allow_pickle=True)
+data = np.load("data/game/train/data.npy", allow_pickle=True)
 
-L, R = (0, 10)
+L, R = (0, 1)
 results_list = []
 for i in range(L * 3, R * 3, 3):
-  print(f"Processing monster index: {i}")
-  name = names[i]
   stories = []
   for j in range(3):
+    print(f"Processing monster index: {i+j}")
+    name = names[i+j]
+    ground_truth = labels[i+j]
     stories.append(data[i + j])
-    prompt = generate_system_prompt(name, stories)
-    # print(f"Generated prompt for monster index {i}:\n{len(prompt)}\n")
+    prompt = generate_reasoning_prompt(name, stories, ground_truth)
+    print(prompt)
     res = infer_max(prompt)
     results_list.append(res)
+    print(f"Generated prompt for monster index {i+j}, prompt len: {len(prompt)}, res len: {len(res)}\n")
 
 # 写入output.txt
-with open("output.txt", "w", encoding="utf-8") as f:
+with open(f"cot/output{L}-{R}.txt", "w", encoding="utf-8") as f:
   for item in results_list:
-    print(item)
     f.write(json.dumps(item, ensure_ascii=False) + "\n")

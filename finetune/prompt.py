@@ -11,7 +11,7 @@ Carefully infer the following six attributes based ONLY on explicit statements o
 The output must contain exactly these six keys, with values as lists of strings chosen from the specified options:
 
 - "best_atk_spd": One of ["Fast"], ["Normal"], or ["Slow"] - the ideal attack speed of a tower to maximize damage.  
-  (e.g., if the monster hardens after rapid hits → choose "Slow"; if it moves fast and needs quick strikes → choose "Fast"; if taking damage makes it stronger → choose "Fast" to kill it before it escalates.)
+  (e.g., if the monster hardens after rapid hits → choose "Slow"; if it moves fast and needs quick strikes → choose "Fast"; if the monster becomes weaker when damaged → choose "Fast"; if high and low damage are equally effective (i.e., no benefit from strong single hits) → choose "Fast".)
 
 - "weak": A list of one or more elements from ["Fire", "Ice", "Poison", "Blunt", "Lightning"] - attributes that deal increased damage to the monster.  
   (e.g., "Poison seeps through its defenses" → "Poison" is a weakness.)
@@ -119,14 +119,14 @@ Before reasoning, remember the precise meaning of each attribute:
   → Choose "Slow" if rapid hits trigger a defense (e.g., hardening).  
   → Otherwise, default to ["Normal"].
 
-- **weak**: Elements that deal **increased** damage (list from ["Fire", "Ice", "Poison", "Blunt", "Lightning"]).  
+- **weak**: Elements(One or more) that deal **increased** damage (list from ["Fire", "Ice", "Poison", "Blunt", "Lightning"]).  
   Only include if text says the element "weakens", "exploits", or "is effective against" the monster.
 
-- **resist**: Elements that deal **reduced** damage.  
+- **resist**: Elements(One or more) that deal **reduced** damage.  
   Include if text states the element "barely works", "is useless", or "has no effect".  
   Note: No element can appear in both "weak" and "resist".
 
-- **special_eff**: At most one element that provides **bonus damage beyond normal weakness**, e.g.,  
+- **special_eff**: At most one element(Zero or one) that provides **bonus damage beyond normal weakness**, e.g.,  
   → "only way to break its shield",  
   → "damage increases with each hit",  
   → "uniquely effective".  
@@ -185,8 +185,11 @@ Example Output:
 Now analyze the following input:
 """
 
-def concat_input(name: str, stories: list[str]) -> str:
+def concat_input(name: str, stories: list[str], ground_truth: dict = None) -> str:
   ret: str = f"Monster Name: {name}\n"
+  if ground_truth is not None:
+    ret += "Ground-truth attributes:\n"
+    ret += str(ground_truth) + "\n"
   ret += f"Number of stories: {len(stories)}\n"
   for i, story in enumerate(stories, start=1):
     ret += f"Story {i}:\n{story}\n"
@@ -195,3 +198,7 @@ def concat_input(name: str, stories: list[str]) -> str:
 def generate_system_prompt(name: str, stories: list[str]) -> str:
     input_text = concat_input(name, stories)
     return SYSTEM_PROMPT + "\n" + input_text
+
+def generate_reasoning_prompt(name: str, stories: list[str], ground_truth: dict) -> str:
+    input_text = concat_input(name, stories, ground_truth)
+    return REASONING_PROMPT + "\n" + input_text

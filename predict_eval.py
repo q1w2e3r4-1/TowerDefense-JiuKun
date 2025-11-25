@@ -80,9 +80,9 @@ if __name__ == "__main__":
     round_ids = []
     L, R = (0, 200)
     for i in range(L * 3, R * 3, 3):
-        name = names[i]
         stories = []
         for j in range(3):
+            name = names[i + j]
             stories.append(data[i + j])
             prompts.append(generate_system_prompt(name, stories))
             game_ids.append(i // 3)

@@ -79,7 +79,7 @@ train.use_llama_pro: false
 train.use_pissa: false
 train.use_rslora: false
 train.use_swanlab: false
-train.val_size: 0
+train.val_size: 0.05
 train.video_max_pixels: 256*256
 train.video_min_pixels: 16*16
 train.warmup_steps: 50
