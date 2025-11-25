@@ -69,7 +69,8 @@ class LLMPredictor(Predictor):
                 {"role": "user", "content": prompt}
             ],
             "max_tokens": kargs.get("max_tokens", 8192),
-            "temperature": kargs.get("temperature", 0.7)
+            "temperature": kargs.get("temperature", 0.7),
+            "chat_template_kwargs": {"enable_thinking": False}
         }
         checker = MonsterAttributeChecker()
         fallback_ans = None

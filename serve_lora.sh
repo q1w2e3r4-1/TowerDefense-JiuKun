@@ -14,4 +14,4 @@ if [ -z "$MODEL_PATH" ]; then
 fi
 
 vllm serve "$MODEL_PATH" --enable-lora \
-    --lora-modules qwen-lora-$LORA_TAG=$LORA_PATH --port "$PORT" --host "$HOST" --max-model-len 65536 $EXTRA_ARGS
+    --lora-modules qwen-lora-$LORA_TAG=$LORA_PATH --port "$PORT" --host "$HOST" --max-model-len 32768 $EXTRA_ARGS

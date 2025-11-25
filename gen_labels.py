@@ -34,7 +34,9 @@ all_attrs = []
 for fpath in record_files:
     attrs = extract_attrs_from_file(fpath, pattern)
     assert len(attrs) == 3, f"文件 {fpath} 匹配到 {len(attrs)} 个pattern，需为3"
-    all_attrs.extend(attrs)
+    for a in attrs:
+        # 直接用eval转为dict（假定输入可信）
+        all_attrs.append(eval(a))
 
 assert len(all_attrs) == 600, f"总共应有600个匹配，实际{len(all_attrs)}"
 # 保存为npy

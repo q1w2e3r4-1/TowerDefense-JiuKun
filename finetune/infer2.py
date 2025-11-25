@@ -1,12 +1,7 @@
-from openai import OpenAI
 import requests
+import json
 
-# 创建一个指向您本地服务器的客户端实例
-# 注意：base_url 指向您启动服务的地址和端口
-client = OpenAI(
-    api_key="token-dummy", # vLLM 服务器默认不需要真实 API Key，但客户端库要求提供一个
-    base_url="http://localhost:8000/v1" # 这是 vLLM 服务的默认地址
-)
+url = "http://localhost:8000/v1/chat/completions"
 
 prompt = '''
 You are a strategic game analyst for a tower defense game that unfolds over multiple rounds. Information about future enemies may appear early, woven into the lore across 1 to 3 interconnected stories. Your job is to extract precise attributes for a specific monster-which will be named by the user-by analyzing all provided story passages as a single, unified context.
@@ -91,17 +86,21 @@ Number of stories: 1
 Story 1:
 The young merchant of Baghdad, now humbled by his misfortunes, stood at the crossroads of fate. His father’s warning echoed in his mind—never go to Tiflis—yet his heart had led him astray, ensnared by the World’s Beauty. But destiny had other plans, weaving trials into his path that would test his wit and resolve. As he wandered the streets of Tiflis, disguised as a peddler, he overheard whispers in the marketplace. A grizzled old man, his voice raspy with age, muttered to a crowd of listeners, "Beware the Iron Colossus, for it is a foe unlike any other. Its shield falters before Lightning, and Poison seeps through its defenses like water through cracks in stone." The merchant paused, though the words seemed unrelated to his quest, they clung to his thoughts like shadows. Later, in the dim light of a tavern, a traveler from distant lands spoke of horrors he had witnessed. "The Marsh Demon and the Shadow Phantom," he said, his eyes wide with fear. "They come in pairs, as though bound by fate. Strike the Demon with Ice, and it will falter, but Fire barely scratches its hide. The Phantom, though—Lightning rends it apart, while Blunt blows glance off like rain." The merchant sipped his drink, the words settling into his mind like pieces of a puzzle he did not yet understand. When he finally reclaimed his magic horn and stood before the King’s palace, the air thrummed with tension. The World’s Beauty, now a braying donkey, glared at him with helpless fury. As Dr. Karabobo, he addressed the crowd of mystics and scholars who had failed to break the curse. Among them, a hooded figure stepped forward, his voice low and ominous. "The Iron Colossus does not share its domain," he warned. "Only one walks the earth at a time, and its armor hardens with each blow struck in haste. Slow it, and its might wanes—but Fire is but a flicker against its frame." The merchant nodded absently, though his mind was fixed on his revenge. In the days that followed, as he prepared to leave Tiflis with his reclaimed treasures, a weathered scroll caught his eye in the palace archives. It bore strange inscriptions, half-faded with time: "Pestilence-Bearers wither with each passing moment, their essence drained by an unseen hand. Yet Lightning strikes them down with ease, as though the heavens themselves demand their end." He rolled the parchment shut, tucking it away without another thought. The journey back to Baghdad was long, and the merchant’s thoughts often wandered to the cryptic warnings he had heard. As his caravan passed through a desolate marsh, his guards grew uneasy. "They say the Marsh Demon lurks here," one muttered. "Fire does little to harm it, but a single strike of Ice..." The merchant tightened his grip on the reins, urging the horses forward. Later, beneath the shade of a ruined tower, an old hermit approached, his voice trembling. "The Shadow Phantom," he whispered, "fears Lightning above all else. But strike it with Blunt, and your efforts are wasted." The merchant tossed him a coin and moved on. By the time he reached Baghdad, the pieces of these strange truths had settled in his mind like scattered leaves. As he celebrated his victory, the words of the old man in Tiflis returned to him: "A damage-reducing shield guards the Iron Colossus, yet Lightning can break it forever." He smiled, though he did not know why. The World’s Beauty, now his obedient bride, served him wine, and he drank deeply, his thoughts drifting to the trials he had overcome—and the unseen enemies he might yet face. The wedding feast lasted forty days, and in the quiet moments between revelries, the merchant would sometimes recall the whispers of the past. "Successive blows within a short time harden the Iron Colossus's defenses," a voice seemed to murmur in his ear. He shook his head, dismissing it as the wind. But somewhere, in the depths of the world, the Iron Colossus waited—and the merchant, though he did not know it, had been forewarned.
 '''
-# 发送聊天补全请求
-response = client.chat.completions.create(
-    model="qwen-lora-default", # 这个模型名称可以是您启动时使用的路径或任意名称，如果未指定 --served-model-name
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": prompt} # 您的输入提示
-    ],
-    temperature=0.7, # 可选参数
-    max_tokens=4096,  # 可选参数，控制生成的最大 token 数
-    # stream=True # 如果您想流式接收输出，可以取消注释此行
-)
 
-# 打印生成的回复
-print(response.choices[0].message.content)
+payload = {
+    "model": "/home/models/full-SFT",
+    "messages": [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": prompt}
+    ],
+    "temperature": 0.7,
+    "top_p": 0.8,
+    "top_k": 20,
+    "max_tokens": 8192,
+    "chat_template_kwargs": {"enable_thinking": False}
+}
+
+response = requests.post(url, json=payload)
+response.raise_for_status()
+result = response.json()
+print(result["choices"][0]["message"]["content"])
