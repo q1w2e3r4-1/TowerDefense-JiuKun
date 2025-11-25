@@ -40,6 +40,6 @@ for fpath in record_files:
 
 assert len(all_attrs) == 600, f"总共应有600个匹配，实际{len(all_attrs)}"
 # 保存为npy
-out_path = os.path.join(folder, "monster_attrs.npy")
+out_path = os.path.join(folder, "labels.npy")
 np.save(out_path, np.array(all_attrs, dtype=object))
 print(f"已保存 {len(all_attrs)} 条属性到 {out_path}")

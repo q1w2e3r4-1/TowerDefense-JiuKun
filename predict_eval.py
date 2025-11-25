@@ -69,7 +69,7 @@ def batch_eval(vllm: LLMPredictor, dummy: DummyPredictor, prompts, game_ids, rou
 # 用法示例
 if __name__ == "__main__":
     import numpy as np
-    from finetune.prompt import generate_prompt
+    from finetune.prompt import generate_system_prompt
 
     names = np.load("data/game/val/names.npy", allow_pickle=True)
     labels = np.load("data/game/val/labels.npy", allow_pickle=True)
@@ -84,7 +84,7 @@ if __name__ == "__main__":
         stories = []
         for j in range(3):
             stories.append(data[i + j])
-            prompts.append(generate_prompt(name, stories))
+            prompts.append(generate_system_prompt(name, stories))
             game_ids.append(i // 3)
             round_ids.append(j + 1)
 

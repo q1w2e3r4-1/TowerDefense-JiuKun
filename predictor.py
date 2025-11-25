@@ -65,7 +65,6 @@ class LLMPredictor(Predictor):
         payload = {
             "model": self.model_name,
             "messages": [
-                {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt}
             ],
             "max_tokens": kargs.get("max_tokens", 8192),

@@ -13,7 +13,7 @@ from game_info import GameInfo, EnemyInfo, TowerInfo
 from game_recorder import GameRecorder
 from strategy import Strategy
 from predictor import Predictor, DummyPredictor, LLMPredictor
-from finetune.prompt import generate_prompt
+from finetune.prompt import generate_system_prompt
 
 response_event = threading.Event()
 response_data = None
@@ -142,7 +142,7 @@ def main_loop():
             game_info.stories.append(resp['enemy_description'])
             cmd = 'predict'
             label_pred_str = predictor.infer(
-                prompt=generate_prompt(resp.get("enemy_name", ""), game_info.stories),
+                prompt=generate_system_prompt(resp.get("enemy_name", ""), game_info.stories),
                 game_id=GAME_ID,
                 round_id=game_info.round
             )
