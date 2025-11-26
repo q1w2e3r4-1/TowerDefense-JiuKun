@@ -89,6 +89,7 @@ def main_loop():
         resp: dict = response_data
         # 更新游戏信息
         if resp.get("start_round"):
+            strategy = Strategy()
             recorder.write("\n\n\n\n==============================", debug=DEBUG)
             round_num = resp.get("i_round", "?")
             recorder.write(f"** New round {round_num} started **", debug=DEBUG)
@@ -111,6 +112,7 @@ def main_loop():
                 )
                 game_info.add_enemy(enemy)
             game_info.set_coins(resp.get("n_coins", 0))
+            game_info.clear_placed_towers()
             if 'store' in resp:
                 game_info.update_store(resp['store'])
         else:
@@ -124,6 +126,7 @@ def main_loop():
                     game_info.set_placement_options(resp['map'].get('extra', []))
                 # 填充已放置塔信息
                 game_info.towers = []
+                print(f"Received towers: {len(resp['towers_list'])}")
                 for tower in resp['towers_list']:
                     attrs = dict(tower)
                     game_info.add_tower(TowerInfo(attrs))
@@ -153,16 +156,8 @@ def main_loop():
                     cmd = input("\nEnter action ('refresh' or 'buy item_idx bag_idx' or 'end'): ").strip()
             else:
                 # ====== TODO_strategy: 下面可以改成自己的代码，用于处理决策
-                if 'map' in resp:
-                    game_info.set_map(resp['map']['map'])
-                    game_info.set_placement_options(resp['map']['extra'])
-                if 'towers_list' in resp:
-                    game_info.towers = [TowerInfo(dict(tower)) for tower in resp['towers_list']]
                 game_info.update_store(resp['store'])
                 game_info.coins = resp['n_coins']
-                if 'start_round' in resp:
-                    print('Starting new round, reset strategy')
-                    strategy = Strategy()
                 cmd = strategy.get_action(EnemyInfo(name='', **label_pred), game_info)
                 # ====== 上面可以改成自己的代码，用于处理决策
 
@@ -205,7 +200,7 @@ def main_loop():
         if not game_over:
             recorder.write("[User Action] " + str(action), debug=DEBUG)
             sio.emit("action", action)
-            # game_info.print_placed_towers()
+            recorder.write(game_info.get_placed_towers(), debug=DEBUG)
 
 def main():    
     global game_over, action_mode
@@ -251,7 +246,6 @@ if __name__ == "__main__":
         SERVER_URL = args.server_url
     action_mode = args.action_mode
     RECORD_DIR = args.record_dir
-
     # predictor选择逻辑
     if args.label_dir:
         predictor = DummyPredictor(answer_dir=args.label_dir)

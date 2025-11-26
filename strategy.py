@@ -1,5 +1,9 @@
 from game_info import EnemyInfo, TowerInfo, GameInfo
 
+PRE_REFRESH = 3
+EXPECT_THRESHOLD = 0.3
+
+# DEBUG_FILE = open('debug.log', 'w')
 class Strategy:
     @staticmethod
     def segment_length_in_circle(p1: tuple, p2: tuple, center: tuple, radius: float) -> float:
@@ -60,6 +64,8 @@ class Strategy:
 
     def __init__(self):
         self.refreshed = False
+        self.refresh_times = 0
+        self.edamages = []
 
     def get_edamages(self, atk, tower: TowerInfo, game: GameInfo):
         mul = atk
@@ -81,39 +87,79 @@ class Strategy:
         return res
 
     def get_action(self, enemy: EnemyInfo, game: GameInfo):
-        weak_stores: list[int] = []
-        none_stores: list[int] = []
-        resist_stores: list[int] = []
+        stores: list[int] = []
         for i in range(len(game.store)):
             tower_type = game.store[i]['type']
             tower = game.towers[tower_type]
-            if tower.attributes['n_targets'] <= 0:
-                continue
-            if tower.attributes['type'] in enemy.weak or True:
-                weak_stores.append(i)
-            elif tower['type'] in enemy.resist:
-                resist_stores.append(i)
+            stores.append(i)
+
+            # best_atk_spd
+            # if enemy.best_atk_spd[0] == 'Fast':
+            #     if tower.attributes['interval'] == 0.30:
+            #         game.store[i]['damage'] /= 5
+            #     elif tower.attributes['interval'] == 0.06:
+            #         game.store[i]['damage'] *= 2
+            # elif enemy.best_atk_spd[0] == 'Normal':
+            #     pass
+            # else:
+            #     if tower.attributes['interval'] == 0.06:
+            #         game.store[i]['damage'] /= 5
+            #     elif tower.attributes['interval'] == 0.10:
+            #         game.store[i]['damage'] /= 2
+            #     else:
+            #         game.store[i]['damage'] *= 2
+
+            # type advantage
+            if tower.attributes['type'] in enemy.weak:
+                game.store[i]['damage'] *= 1.25
+            elif tower.attributes['type'] in enemy.resist:
+                game.store[i]['damage'] *= 0.8
+
+            # slow_eff
+            if enemy.slow_eff[0] == 'Resist':
+                game.store[i]['damage'] *= tower.attributes.get('speedDown', 1.0)
+            elif enemy.slow_eff[0] == 'Weak':
+                game.store[i]['damage'] /= (tower.attributes.get('speedDown', 1.0) ** 3)
+
+            # n_targets
+            if tower.attributes['n_targets'] == -1 or tower.attributes.get('bullet_range', 0):
+                tower.attributes['n_targets'] = 6
+            mul = tower.attributes['n_targets']
+            if enemy.occurrence[0] == 'Double':
+                mul = min(mul, 2)
+            elif enemy.occurrence[0] == 'Triple':
+                mul = min(mul, 3)
+            elif enemy.occurrence[0] == 'Dense':
+                mul = min(mul, 6)
             else:
-                none_stores.append(i)
-        if not self.refreshed:
-            if not weak_stores:
-                self.refreshed = True
-                return 'refresh'
-        if not weak_stores:
-            stores = none_stores if none_stores else resist_stores
-        else:
-            stores = weak_stores
+                mul = min(mul, 1)
+            game.store[i]['damage'] *= mul
+            
+            # special_eff
+            if tower.attributes['type'] in enemy.special_eff:
+                game.store[i]['damage'] *= 1.54
 
         max_edamage = 0
         maxid = -1
         maxpl = -1
         for s in stores:
             r = self.get_edamages(game.store[s]['damage'], game.towers[game.store[s]['type']], game)
+            # DEBUG_FILE.write(f'Expected damage: max: {max(r)}\n')
+            # DEBUG_FILE.write(game.towers[game.store[s]['type']].attributes.__str__()+'\n')
+            # DEBUG_FILE.write(str(game.store[s])+'\n')
             if game.store[s]['cost'] <= game.coins and max(r) > max_edamage:
                 max_edamage = max(r)
                 maxid = s
                 maxpl = r.index(max(r))
+        # DEBUG_FILE.write(f'MAX {max_edamage}\n')
         self.refreshed = False
-        if maxid == -1:
+        self.edamages.append(max_edamage)
+        self.edamages.sort()
+        if maxid == -1 or self.refresh_times < PRE_REFRESH:
+            self.refresh_times += 1
+            return 'refresh'
+        if max_edamage < self.edamages[-1] * EXPECT_THRESHOLD:
+            self.edamages.pop(-1)
+            self.refresh_times += 1
             return 'refresh'
         return f"buy {maxid} {maxpl}"

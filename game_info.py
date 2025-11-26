@@ -29,6 +29,9 @@ class GameInfo:
         self.round = 0
         self.stories: list[str] = []
 
+    def get_placed_towers(self):
+        return json.dumps([None if tower is None else tower.attributes for tower in self.placed_towers])
+    
     def print_placed_towers(self):
         # 打印能让模拟器看懂的格式
         print(json.dumps([None if tower is None else tower.attributes for tower in self.placed_towers]))
@@ -123,3 +126,6 @@ class GameInfo:
         if 0 <= idx < len(self.store):
             return copy.deepcopy(self.store[idx])
         return None
+    
+    def clear_placed_towers(self):
+        self.placed_towers = [None] * len(self.placement_options)
