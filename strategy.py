@@ -92,10 +92,52 @@ class Strategy:
             tower_type = game.store[i]['type']
             tower = game.towers[tower_type]
             stores.append(i)
+
+            # best_atk_spd
+            # if enemy.best_atk_spd[0] == 'Fast':
+            #     if tower.attributes['interval'] == 0.30:
+            #         game.store[i]['damage'] /= 5
+            #     elif tower.attributes['interval'] == 0.06:
+            #         game.store[i]['damage'] *= 2
+            # elif enemy.best_atk_spd[0] == 'Normal':
+            #     pass
+            # else:
+            #     if tower.attributes['interval'] == 0.06:
+            #         game.store[i]['damage'] /= 5
+            #     elif tower.attributes['interval'] == 0.10:
+            #         game.store[i]['damage'] /= 2
+            #     else:
+            #         game.store[i]['damage'] *= 2
+
+            # type advantage
             if tower.attributes['type'] in enemy.weak:
-                game.store[i]['damage'] *= 1.5
+                game.store[i]['damage'] *= 1.25
             elif tower.attributes['type'] in enemy.resist:
-                game.store[i]['damage'] *= 0.5
+                game.store[i]['damage'] *= 0.8
+
+            # slow_eff
+            if enemy.slow_eff[0] == 'Resist':
+                game.store[i]['damage'] *= tower.attributes.get('speedDown', 1.0)
+            elif enemy.slow_eff[0] == 'Weak':
+                game.store[i]['damage'] /= (tower.attributes.get('speedDown', 1.0) ** 3)
+
+            # n_targets
+            if tower.attributes['n_targets'] == -1 or tower.attributes.get('bullet_range', 0):
+                tower.attributes['n_targets'] = 6
+            mul = tower.attributes['n_targets']
+            if enemy.occurrence[0] == 'Double':
+                mul = min(mul, 2)
+            elif enemy.occurrence[0] == 'Triple':
+                mul = min(mul, 3)
+            elif enemy.occurrence[0] == 'Dense':
+                mul = min(mul, 6)
+            else:
+                mul = min(mul, 1)
+            game.store[i]['damage'] *= mul
+            
+            # special_eff
+            if tower.attributes['type'] in enemy.special_eff:
+                game.store[i]['damage'] *= 1.54
 
         max_edamage = 0
         maxid = -1

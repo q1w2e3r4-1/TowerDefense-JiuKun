@@ -126,6 +126,7 @@ def main_loop():
                     game_info.set_placement_options(resp['map'].get('extra', []))
                 # 填充已放置塔信息
                 game_info.towers = []
+                print(f"Received towers: {len(resp['towers_list'])}")
                 for tower in resp['towers_list']:
                     attrs = dict(tower)
                     game_info.add_tower(TowerInfo(attrs))
@@ -155,11 +156,6 @@ def main_loop():
                     cmd = input("\nEnter action ('refresh' or 'buy item_idx bag_idx' or 'end'): ").strip()
             else:
                 # ====== TODO_strategy: 下面可以改成自己的代码，用于处理决策
-                if 'map' in resp:
-                    game_info.set_map(resp['map']['map'])
-                    game_info.set_placement_options(resp['map']['extra'])
-                if 'towers_list' in resp:
-                    game_info.towers = [TowerInfo(dict(tower)) for tower in resp['towers_list']]
                 game_info.update_store(resp['store'])
                 game_info.coins = resp['n_coins']
                 cmd = strategy.get_action(EnemyInfo(name='', **label_pred), game_info)
@@ -250,7 +246,6 @@ if __name__ == "__main__":
         SERVER_URL = args.server_url
     action_mode = args.action_mode
     RECORD_DIR = args.record_dir
-
     # predictor选择逻辑
     if args.label_dir:
         predictor = DummyPredictor(answer_dir=args.label_dir)
