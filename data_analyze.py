@@ -28,7 +28,9 @@ def analyze_single_class(label_dir, pred_dir, key, valid_classes=None):
         pred_val = pred.get(key, ["Normal"])
         label_cls = label_val[0] if label_val else "Normal"
         pred_cls = pred_val[0] if pred_val else "Normal"
-        if key == 'best_atk_spd' and label_cls == 'Fast' and pred_cls == 'Normal':
+        # if key == 'best_atk_spd' and label_cls == 'Fast' and pred_cls == 'Normal':
+        #     print(f"Discrepancy found: id = {total}")
+        if key == 'slow_eff' and label_cls == 'Resist' and pred_cls == 'Normal':
             print(f"Discrepancy found: id = {total}")
         if label_cls not in valid_classes:
             label_cls = valid_classes[0]

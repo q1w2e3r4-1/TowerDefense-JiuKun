@@ -94,20 +94,18 @@ class Strategy:
             stores.append(i)
 
             # best_atk_spd
-            # if enemy.best_atk_spd[0] == 'Fast':
-            #     if tower.attributes['interval'] == 0.30:
-            #         game.store[i]['damage'] /= 5
-            #     elif tower.attributes['interval'] == 0.06:
-            #         game.store[i]['damage'] *= 2
-            # elif enemy.best_atk_spd[0] == 'Normal':
-            #     pass
-            # else:
-            #     if tower.attributes['interval'] == 0.06:
-            #         game.store[i]['damage'] /= 5
-            #     elif tower.attributes['interval'] == 0.10:
-            #         game.store[i]['damage'] /= 2
-            #     else:
-            #         game.store[i]['damage'] *= 2
+            if enemy.best_atk_spd[0] == 'Fast':
+                if tower.attributes['interval'] >= 0.30:
+                    game.store[i]['damage'] /= 2
+                elif tower.attributes['interval'] <= 0.06:
+                    game.store[i]['damage'] *= 1.5
+            elif enemy.best_atk_spd[0] == 'Normal':
+                pass
+            else:
+                if tower.attributes['interval'] <= 0.06:
+                    game.store[i]['damage'] /= 1.5
+                elif tower.attributes['interval'] >= 0.30:
+                    game.store[i]['damage'] *= 2
 
             # type advantage
             if tower.attributes['type'] in enemy.weak:
@@ -122,7 +120,7 @@ class Strategy:
                 game.store[i]['damage'] /= (tower.attributes.get('speedDown', 1.0) ** 3)
 
             # n_targets
-            if tower.attributes['n_targets'] == -1 or tower.attributes.get('bullet_range', 0):
+            if tower.attributes['n_targets'] == -1:
                 tower.attributes['n_targets'] = 6
             mul = tower.attributes['n_targets']
             if enemy.occurrence[0] == 'Double':
@@ -130,8 +128,13 @@ class Strategy:
             elif enemy.occurrence[0] == 'Triple':
                 mul = min(mul, 3)
             elif enemy.occurrence[0] == 'Dense':
+                if tower.attributes.get('bullet_range', 0):
+                    tower.attributes['n_targets'] = 6
+                    mul = 6
                 mul = min(mul, 6)
-            else:
+            elif enemy.occurrence[0] == 'Sparse':
+                mul = min(mul, 6)
+            else: # Single
                 mul = min(mul, 1)
             game.store[i]['damage'] *= mul
             

@@ -11,7 +11,7 @@ Carefully infer the following six attributes based ONLY on explicit statements o
 The output must contain exactly these six keys, with values as lists of strings chosen from the specified options:
 
 - "best_atk_spd": One of ["Fast"], ["Normal"], or ["Slow"] - the ideal attack speed of a tower to maximize damage.  
-  (e.g., if the monster hardens after rapid hits → choose "Slow"; if it moves fast and needs quick strikes → choose "Fast"; if the monster becomes weaker when damaged → choose "Fast"; if high and low damage are equally effective (i.e., no benefit from strong single hits) → choose "Fast".)
+  (e.g., if the monster hardens after rapid hits → choose "Slow"; if the monster becomes weaker when damaged → choose "Fast"; if high and low damage are equally effective (i.e., no benefit from strong single hits) → choose "Fast".)
 
 - "weak": A list of one or more elements from ["Fire", "Ice", "Poison", "Blunt", "Lightning"] - attributes that deal increased damage to the monster.  
   (e.g., "Poison seeps through its defenses" → "Poison" is a weakness.)
@@ -25,7 +25,7 @@ The output must contain exactly these six keys, with values as lists of strings 
   Also note: An element cannot appear in both "resist" and "special_eff".
 
 - "slow_eff": One of ["Resist"], ["Normal"], or ["Weak"] - how the monster reacts to slowing effects.  
-  (e.g., "Slow it, and its might wanes" → "Weak"; "It shrugs off slows" → "Resist".)
+  (e.g., "Slow it, and its might wanes" → "Weak"; "It shrugs off slows" → "Resist"; "blinks forward at fixed intervals" → "Resist" (actually immune to slow); "suffers constant damage over time", "withers as time passes", or has any form of passive time-based decay → "Weak", because slowing increases total damage taken from the decay.)
 
 - "occurrence": One of ["Single"], ["Double"], ["Triple"], ["Sparse"], or ["Dense"] - indicates the typical appearance pattern of the monster, defined as follows:  
   - "Single": Exactly one monster appears per wave.  
@@ -53,6 +53,11 @@ Rules:
 4. When a monster's behavior implies a strategic need (e.g., "each wound makes it stronger"), infer that the optimal tower speed is **Fast** to prevent escalation.  
 5. If an attribute is described as the **only way** to overcome a mechanic (e.g., "shield could only be broken by fire"), assign it to **special_eff** even if it also appears in weak.  
 6. Output ONLY the JSON object. Do not add any other text before or after.
+7. All attribute values MUST use ONLY the exact string options provided in the schema. Do not substitute synonyms or paraphrase.  
+   - For element types ("weak", "resist", "special_eff"), ONLY use: "Fire", "Ice", "Poison", "Blunt", "Lightning".  
+     Example: if the text says "Venom", "toxin", or "venomous bite", map it to "Poison".  
+     Example: if the text says "crushing blows" or "mace", map it to "Blunt".  
+     Example: if the text says "frost" or "cold", map it to "Ice". 
 
 -
 

@@ -6,11 +6,11 @@ from finetune.prompt import generate_reasoning_prompt
 from predictor import LLMReasoning
 predictor = LLMReasoning()
 
-names = np.load("data/game/train/names.npy", allow_pickle=True)
-labels = np.load("data/game/train/labels.npy", allow_pickle=True)
-data = np.load("data/game/train/data.npy", allow_pickle=True)
+names = np.load("data/game/merge/names.npy", allow_pickle=True)
+labels = np.load("data/game/merge/labels.npy", allow_pickle=True)
+data = np.load("data/game/merge/data.npy", allow_pickle=True)
 
-L, R = (400, 800)
+L, R = (950, 1000)
 results_list = []
 for i in range(L * 3, R * 3, 3):
   stories = []
@@ -27,6 +27,7 @@ for i in range(L * 3, R * 3, 3):
         if(len(res) > 5000):
           print("too long!!!, retrying")
           continue
+        print(res)
         results_list.append(res)
         print(f"Generated prompt for monster index {i+j}, prompt len: {len(prompt)}, res len: {len(res)}\n")
         break

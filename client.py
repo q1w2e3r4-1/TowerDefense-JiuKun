@@ -126,7 +126,6 @@ def main_loop():
                     game_info.set_placement_options(resp['map'].get('extra', []))
                 # 填充已放置塔信息
                 game_info.towers = []
-                print(f"Received towers: {len(resp['towers_list'])}")
                 for tower in resp['towers_list']:
                     attrs = dict(tower)
                     game_info.add_tower(TowerInfo(attrs))
