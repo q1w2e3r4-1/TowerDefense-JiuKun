@@ -87,28 +87,15 @@ class Strategy:
         return res
 
     def get_action(self, enemy: EnemyInfo, game: GameInfo):
-        weak_stores: list[int] = []
-        none_stores: list[int] = []
-        resist_stores: list[int] = []
+        stores: list[int] = []
         for i in range(len(game.store)):
             tower_type = game.store[i]['type']
             tower = game.towers[tower_type]
-            if tower.attributes['n_targets'] <= 0:
-                continue
-            if tower.attributes['type'] in enemy.weak or True:
-                weak_stores.append(i)
-            elif tower['type'] in enemy.resist:
-                resist_stores.append(i)
-            else:
-                none_stores.append(i)
-        if not self.refreshed:
-            if not weak_stores:
-                self.refreshed = True
-                return 'refresh'
-        if not weak_stores:
-            stores = none_stores if none_stores else resist_stores
-        else:
-            stores = weak_stores
+            stores.append(i)
+            if tower.attributes['type'] in enemy.weak:
+                game.store[i]['damage'] *= 1.5
+            elif tower.attributes['type'] in enemy.resist:
+                game.store[i]['damage'] *= 0.5
 
         max_edamage = 0
         maxid = -1

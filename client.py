@@ -89,6 +89,7 @@ def main_loop():
         resp: dict = response_data
         # 更新游戏信息
         if resp.get("start_round"):
+            strategy = Strategy()
             recorder.write("\n\n\n\n==============================", debug=DEBUG)
             round_num = resp.get("i_round", "?")
             recorder.write(f"** New round {round_num} started **", debug=DEBUG)
@@ -161,9 +162,6 @@ def main_loop():
                     game_info.towers = [TowerInfo(dict(tower)) for tower in resp['towers_list']]
                 game_info.update_store(resp['store'])
                 game_info.coins = resp['n_coins']
-                if 'start_round' in resp:
-                    print('Starting new round, reset strategy')
-                    strategy = Strategy()
                 cmd = strategy.get_action(EnemyInfo(name='', **label_pred), game_info)
                 # ====== 上面可以改成自己的代码，用于处理决策
 
