@@ -37,7 +37,7 @@ game_end = False
 action_mode = 'input'
 
 recorder = None
-strategy = Strategy()
+strategy = None
 game_info = GameInfo()
 predictor = Predictor()
 
@@ -89,7 +89,6 @@ def main_loop():
         resp: dict = response_data
         # 更新游戏信息
         if resp.get("start_round"):
-            strategy = Strategy()
             recorder.write("\n\n\n\n==============================", debug=DEBUG)
             round_num = resp.get("i_round", "?")
             recorder.write(f"** New round {round_num} started **", debug=DEBUG)
@@ -129,6 +128,7 @@ def main_loop():
                 for tower in resp['towers_list']:
                     attrs = dict(tower)
                     game_info.add_tower(TowerInfo(attrs))
+                strategy = Strategy(game_info)
             recorder.write(f"Coins: {resp['n_coins']}", debug=DEBUG)
             game_info.set_coins(resp.get('n_coins', 0))
             if 'store' in resp:

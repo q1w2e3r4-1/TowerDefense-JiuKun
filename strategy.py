@@ -1,23 +1,67 @@
 from game_info import EnemyInfo, TowerInfo, GameInfo
-
+from math import sqrt
+from visualize import visualize_map_and_points
 PRE_REFRESH = 3
 EXPECT_THRESHOLD = 0.3
-
+SEG_DIST = 0.03
 # DEBUG_FILE = open('debug.log', 'w')
+
+# --- Point class for discrete map points ---
+class Point:
+    def __init__(self, x: float, y: float):
+        self.x = x
+        self.y = y
+    def __repr__(self):
+        return f"Point({self.x}, {self.y})"
 
 # --- Geometry class for computational geometry operations ---
 class Geometry:
-    def sum_segments_in_circle(self, game_map, center, radius):
+    def __init__(self, game_info: GameInfo):
+        self.game_info = game_info
+        self.map = game_info.map
+        self.points = []  # List[Point]
+        step = SEG_DIST
+        total_len = 0.0
+        segs = []
+        # 预先计算每段长度和累积长度
+        for i in range(len(self.map) - 1):
+            p1 = self.map[i]
+            p2 = self.map[i + 1]
+            dx, dy = p2[0] - p1[0], p2[1] - p1[1]
+            seg_len = sqrt(dx ** 2 + dy ** 2)
+            segs.append((p1, p2, seg_len))
+            total_len += seg_len
+
+        pos = step / 2
+        curr_seg = 0
+        curr_seg_start = 0.0
+        while pos < total_len + 1e-8:
+            # 找到pos落在哪一段
+            while curr_seg < len(segs) and pos > curr_seg_start + segs[curr_seg][2]:
+                curr_seg_start += segs[curr_seg][2]
+                curr_seg += 1
+            if curr_seg >= len(segs):
+                break
+            p1, p2, seg_len = segs[curr_seg]
+            t = (pos - curr_seg_start) / seg_len
+            x = p1[0] + t * (p2[0] - p1[0])
+            y = p1[1] + t * (p2[1] - p1[1])
+            self.points.append(Point(x, y))
+            pos += step
+
+        # 最后一段结尾不足step直接忽略
+        # visualize_map_and_points(self.map, self.points, f"{len(self.points)}.png")
+
+    def sum_segments_in_circle(self, center, radius):
         """
         Calculate the total length of all segments of game_map that are within the circle (center, radius).
-        game_map: list of points (tuples)
         center: (x, y)
         radius: float
         """
         total = 0.0
-        for i in range(len(game_map) - 1):
-            p1 = game_map[i]
-            p2 = game_map[i + 1]
+        for i in range(len(self.map) - 1):
+            p1 = self.map[i]
+            p2 = self.map[i + 1]
             total += self.segment_length_in_circle(p1, p2, center, radius)
         return total
     
@@ -78,11 +122,11 @@ class Geometry:
         return 0.0
 
 class Strategy:
-    def __init__(self):
+    def __init__(self, game_info: GameInfo):
         self.refreshed = False
         self.refresh_times = 0
         self.edamages = []
-        self.geometry = Geometry()
+        self.geometry = Geometry(game_info)
 
     def get_edamages(self, atk, tower: TowerInfo, game: GameInfo):
         mul = atk
@@ -95,7 +139,7 @@ class Strategy:
             if t:
                 res.append(0.0)
                 continue
-            sum = self.geometry.sum_segments_in_circle(game.map, o, tower.attributes['range'])
+            sum = self.geometry.sum_segments_in_circle(o, tower.attributes['range'])
             res.append(sum*mul)
         return res
 
