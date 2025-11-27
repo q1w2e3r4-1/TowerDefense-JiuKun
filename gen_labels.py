@@ -7,9 +7,20 @@ def get_record_files(folder):
     files = []
     for fname in os.listdir(folder):
         if fname.endswith('.record'):
+            # 解析game_id
+            parts = fname.split('_')
+            try:
+                for i, p in enumerate(parts):
+                    if p == 'game' and i+1 < len(parts):
+                        game_id = int(parts[i+1].split('.')[0])
+                        break
+                else:
+                    game_id = -1
+            except Exception:
+                game_id = -1
             fpath = os.path.join(folder, fname)
-            files.append((os.path.getctime(fpath), fpath))
-    files.sort()  # 按创建时间排序
+            files.append((game_id, fpath))
+    files.sort(key=lambda x: x[0])  # 按game_id排序
     return [f[1] for f in files]
 
 def extract_attrs_from_file(fpath, pattern):
