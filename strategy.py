@@ -3,7 +3,7 @@ from math import sqrt
 from visualize import visualize_map_and_points
 PRE_REFRESH = 3
 EXPECT_THRESHOLD = 0.3
-SEG_DIST = 0.03
+SEG_DIST = 0.1
 # DEBUG_FILE = open('debug.log', 'w')
 
 # --- Point class for discrete map points ---
@@ -14,12 +14,30 @@ class Point:
     def __repr__(self):
         return f"Point({self.x}, {self.y})"
 
+# --- RangeCoverageTable: 预处理每个放置点和射程的路径点覆盖 ---
+class RangeCoverageTable:
+    def __init__(self, placement_options, points: list[Point], max_radius=20):
+        # contribs[pos_idx][radius] = list of point indices
+        self.placement_options = placement_options
+        self.max_radius = max_radius
+        self.contribs = [{} for _ in range(len(placement_options))]
+        for idx, pos in enumerate(placement_options):
+            px, py = pos
+            for r in range(0, max_radius + 1):
+                r2 = r * r
+                indices = [i for i, pt in enumerate(points) if (pt.x - px) ** 2 + (pt.y - py) ** 2 <= r2]
+                self.contribs[idx][r] = indices
+
+    def get_coverage(self, pos_idx, radius):
+        r = int(radius)
+        return self.contribs[pos_idx].get(r, [])
+    
 # --- Geometry class for computational geometry operations ---
 class Geometry:
     def __init__(self, game_info: GameInfo):
         self.game_info = game_info
         self.map = game_info.map
-        self.points = []  # List[Point]
+        self.points: list[Point] = []  # List[Point]
         step = SEG_DIST
         total_len = 0.0
         segs = []
@@ -48,79 +66,16 @@ class Geometry:
             y = p1[1] + t * (p2[1] - p1[1])
             self.points.append(Point(x, y))
             pos += step
+        # 最后一段结尾不足step直接忽略  
+        visualize_map_and_points(self.map, self.points, 'saved_map_points.png')
+        # 预处理每个placement_option和0-20所有整数射程的点贡献
+        self.range_table = RangeCoverageTable(game_info.placement_options, self.points, max_radius=20)
 
-        # 最后一段结尾不足step直接忽略
-        # visualize_map_and_points(self.map, self.points, f"{len(self.points)}.png")
-
-    def sum_segments_in_circle(self, center, radius):
-        """
-        Calculate the total length of all segments of game_map that are within the circle (center, radius).
-        center: (x, y)
-        radius: float
-        """
-        total = 0.0
-        for i in range(len(self.map) - 1):
-            p1 = self.map[i]
-            p2 = self.map[i + 1]
-            total += self.segment_length_in_circle(p1, p2, center, radius)
-        return total
+    def sum_segments_in_circle(self, pos_idx, radius):
+        # 获取覆盖点下标list
+        indices = self.range_table.get_coverage(pos_idx, radius)
+        return len(indices) * SEG_DIST
     
-    def point_in_circle(self, point, center, radius):
-        px, py = point
-        cx, cy = center
-        return (px - cx) ** 2 + (py - cy) ** 2 <= radius ** 2
-
-    def line_circle_intersection(self, p1, p2, center, radius):
-        from math import sqrt
-        x1, y1 = p1
-        x2, y2 = p2
-        cx, cy = center
-
-        dx, dy = x2 - x1, y2 - y1
-        a = dx ** 2 + dy ** 2
-        b = 2 * (dx * (x1 - cx) + dy * (y1 - cy))
-        c = (x1 - cx) ** 2 + (y1 - cy) ** 2 - radius ** 2
-
-        discriminant = b ** 2 - 4 * a * c
-        if discriminant < 0:
-            return []
-
-        sqrt_discriminant = sqrt(discriminant)
-        t1 = (-b - sqrt_discriminant) / (2 * a)
-        t2 = (-b + sqrt_discriminant) / (2 * a)
-
-        intersections = []
-        if 0 <= t1 <= 1:
-            intersections.append((x1 + t1 * dx, y1 + t1 * dy))
-        if 0 <= t2 <= 1:
-            intersections.append((x1 + t2 * dx, y1 + t2 * dy))
-
-        return intersections
-
-    def segment_length_in_circle(self, p1: tuple, p2: tuple, center: tuple, radius: float) -> float:
-        from math import sqrt
-        if self.point_in_circle(p1, center, radius) and self.point_in_circle(p2, center, radius):
-            dx, dy = p2[0] - p1[0], p2[1] - p1[1]
-            return sqrt(dx ** 2 + dy ** 2)
-
-        intersections = self.line_circle_intersection(p1, p2, center, radius)
-        if len(intersections) == 2:
-            x1, y1 = intersections[0]
-            x2, y2 = intersections[1]
-            dx, dy = x2 - x1, y2 - y1
-            return sqrt(dx ** 2 + dy ** 2)
-        elif len(intersections) == 1:
-            if not self.point_in_circle(p1, center, radius) and not self.point_in_circle(p2, center, radius):
-                return 0.0
-            if self.point_in_circle(p1, center, radius):
-                x1, y1 = p1
-            else:
-                x1, y1 = p2
-            x2, y2 = intersections[0]
-            dx, dy = x2 - x1, y2 - y1
-            return sqrt(dx ** 2 + dy ** 2)
-        return 0.0
-
 class Strategy:
     def __init__(self, game_info: GameInfo):
         self.refreshed = False
@@ -135,12 +90,12 @@ class Strategy:
         mul /= tower.attributes['interval']
 
         res = []
-        for (o, t) in zip(game.placement_options, game.placed_towers):
+        for idx, t in enumerate(game.placed_towers):
             if t:
                 res.append(0.0)
                 continue
-            sum = self.geometry.sum_segments_in_circle(o, tower.attributes['range'])
-            res.append(sum*mul)
+            sumv = self.geometry.sum_segments_in_circle(idx, tower.attributes['range'])
+            res.append(sumv * mul)
         return res
 
     def get_action(self, enemy: EnemyInfo, game: GameInfo):
