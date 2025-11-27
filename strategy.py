@@ -4,56 +4,71 @@ PRE_REFRESH = 3
 EXPECT_THRESHOLD = 0.3
 
 # DEBUG_FILE = open('debug.log', 'w')
-class Strategy:
-    @staticmethod
-    def segment_length_in_circle(p1: tuple, p2: tuple, center: tuple, radius: float) -> float:
+
+# --- Geometry class for computational geometry operations ---
+class Geometry:
+    def sum_segments_in_circle(self, game_map, center, radius):
+        """
+        Calculate the total length of all segments of game_map that are within the circle (center, radius).
+        game_map: list of points (tuples)
+        center: (x, y)
+        radius: float
+        """
+        total = 0.0
+        for i in range(len(game_map) - 1):
+            p1 = game_map[i]
+            p2 = game_map[i + 1]
+            total += self.segment_length_in_circle(p1, p2, center, radius)
+        return total
+    
+    def point_in_circle(self, point, center, radius):
+        px, py = point
+        cx, cy = center
+        return (px - cx) ** 2 + (py - cy) ** 2 <= radius ** 2
+
+    def line_circle_intersection(self, p1, p2, center, radius):
         from math import sqrt
+        x1, y1 = p1
+        x2, y2 = p2
+        cx, cy = center
 
-        def point_in_circle(point, center, radius):
-            px, py = point
-            cx, cy = center
-            return (px - cx) ** 2 + (py - cy) ** 2 <= radius ** 2
+        dx, dy = x2 - x1, y2 - y1
+        a = dx ** 2 + dy ** 2
+        b = 2 * (dx * (x1 - cx) + dy * (y1 - cy))
+        c = (x1 - cx) ** 2 + (y1 - cy) ** 2 - radius ** 2
 
-        def line_circle_intersection(p1, p2, center, radius):
-            x1, y1 = p1
-            x2, y2 = p2
-            cx, cy = center
+        discriminant = b ** 2 - 4 * a * c
+        if discriminant < 0:
+            return []
 
-            dx, dy = x2 - x1, y2 - y1
-            a = dx ** 2 + dy ** 2
-            b = 2 * (dx * (x1 - cx) + dy * (y1 - cy))
-            c = (x1 - cx) ** 2 + (y1 - cy) ** 2 - radius ** 2
+        sqrt_discriminant = sqrt(discriminant)
+        t1 = (-b - sqrt_discriminant) / (2 * a)
+        t2 = (-b + sqrt_discriminant) / (2 * a)
 
-            discriminant = b ** 2 - 4 * a * c
-            if discriminant < 0:
-                return []
+        intersections = []
+        if 0 <= t1 <= 1:
+            intersections.append((x1 + t1 * dx, y1 + t1 * dy))
+        if 0 <= t2 <= 1:
+            intersections.append((x1 + t2 * dx, y1 + t2 * dy))
 
-            sqrt_discriminant = sqrt(discriminant)
-            t1 = (-b - sqrt_discriminant) / (2 * a)
-            t2 = (-b + sqrt_discriminant) / (2 * a)
+        return intersections
 
-            intersections = []
-            if 0 <= t1 <= 1:
-                intersections.append((x1 + t1 * dx, y1 + t1 * dy))
-            if 0 <= t2 <= 1:
-                intersections.append((x1 + t2 * dx, y1 + t2 * dy))
-
-            return intersections
-
-        if point_in_circle(p1, center, radius) and point_in_circle(p2, center, radius):
+    def segment_length_in_circle(self, p1: tuple, p2: tuple, center: tuple, radius: float) -> float:
+        from math import sqrt
+        if self.point_in_circle(p1, center, radius) and self.point_in_circle(p2, center, radius):
             dx, dy = p2[0] - p1[0], p2[1] - p1[1]
             return sqrt(dx ** 2 + dy ** 2)
 
-        intersections = line_circle_intersection(p1, p2, center, radius)
+        intersections = self.line_circle_intersection(p1, p2, center, radius)
         if len(intersections) == 2:
             x1, y1 = intersections[0]
             x2, y2 = intersections[1]
             dx, dy = x2 - x1, y2 - y1
             return sqrt(dx ** 2 + dy ** 2)
         elif len(intersections) == 1:
-            if not point_in_circle(p1, center, radius) and not point_in_circle(p2, center, radius):
+            if not self.point_in_circle(p1, center, radius) and not self.point_in_circle(p2, center, radius):
                 return 0.0
-            if point_in_circle(p1, center, radius):
+            if self.point_in_circle(p1, center, radius):
                 x1, y1 = p1
             else:
                 x1, y1 = p2
@@ -62,10 +77,12 @@ class Strategy:
             return sqrt(dx ** 2 + dy ** 2)
         return 0.0
 
+class Strategy:
     def __init__(self):
         self.refreshed = False
         self.refresh_times = 0
         self.edamages = []
+        self.geometry = Geometry()
 
     def get_edamages(self, atk, tower: TowerInfo, game: GameInfo):
         mul = atk
@@ -78,11 +95,7 @@ class Strategy:
             if t:
                 res.append(0.0)
                 continue
-            sum = 0.0
-            for _i in range(len(game.map)-1):
-                p1 = game.map[_i]
-                p2 = game.map[_i+1]
-                sum += self.segment_length_in_circle(p1, p2, o, tower.attributes['range'])
+            sum = self.geometry.sum_segments_in_circle(game.map, o, tower.attributes['range'])
             res.append(sum*mul)
         return res
 
