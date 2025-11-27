@@ -89,8 +89,6 @@ class Strategy:
 
     def get_edamages(self, atk, tower: TowerInfo, game: GameInfo, slow_rate: float, is_special_eff: bool):
         mul = atk
-        if 'speedDown' in tower.attributes:
-            mul /= tower.attributes['speedDown']
         mul /= tower.attributes['interval']
 
         res = []
@@ -170,7 +168,6 @@ class Strategy:
                 max_edamage = max(r)
                 maxid = i
                 maxpl = r.index(max(r))
-        print(f"Decided action: maxedamage={max_edamage}, maxid={maxid}, maxpl={maxpl}")
         
         # DEBUG_FILE.write(f'MAX {max_edamage}\n')
         self.refreshed = False
