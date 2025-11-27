@@ -16,6 +16,7 @@ class LLMPredictor(Predictor):
         self.host = host
         self.extra_args = extra_args or []
         self._wait_until_ready()
+        self.checker = MonsterAttributeChecker()
         # 查询/v1/models获取model名称
         url = f"http://{self.host}:{self.port}/v1/models"
         try:
@@ -71,7 +72,7 @@ class LLMPredictor(Predictor):
             "temperature": kargs.get("temperature", 0.7),
             "chat_template_kwargs": {"enable_thinking": False}
         }
-        checker = MonsterAttributeChecker()
+        
         fallback_ans = None
         for attempt in range(3):
             resp = requests.post(url, json=payload)
@@ -80,11 +81,11 @@ class LLMPredictor(Predictor):
             # chat/completions接口返回的是message.content
             result_text = result["message"]["content"] if "message" in result else result.get("text", "")
             result_text = result_text.replace("'", '"')
-            ok, msg = checker.check(result_text)
+            ok, msg = self.checker.check(result_text)
             if ok:
                 return result_text
             else:
-                ok1, msg1 = checker.check(result_text, level=1)
+                ok1, msg1 = self.checker.check(result_text, level=1)
                 if ok1:
                     fallback_ans = result_text
                 print(f"[LLMPredictor] Checker failed: {msg}. Retrying ({attempt+1}/3)...")

@@ -212,3 +212,4 @@ record_*/
 predict_*/
 *.out
 llamaboard_cache/
+cot/data.npy
