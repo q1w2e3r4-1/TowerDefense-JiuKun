@@ -12,8 +12,9 @@ class Point:
     def __init__(self, x: float, y: float):
         self.x = x
         self.y = y
-        self.slow = 1.0
+        self.slow_rate = 1.0
         self.has_special_eff = False
+        self.total_damage = 0.0
 
     def __repr__(self):
         return f"Point({self.x}, {self.y})"
@@ -75,10 +76,41 @@ class Geometry:
         # 预处理每个placement_option和0-20所有整数射程的点贡献
         self.range_table = RangeCoverageTable(game_info.placement_options, self.points, max_radius=20)
 
-    def sum_segments_in_circle(self, pos_idx, radius):
+    def sum_contribution_in_circle(self, pos_idx, radius, atk: float, slow_rate: float, is_special_eff: bool):
+        # 计算某个放置点在某个射程下，覆盖的路径点贡献delta总和
+        def get_old_damage(pt: Point):
+            dmg = pt.total_damage
+            dmg /= pt.slow_rate
+            dmg *= SP_EFF_RATE if pt.has_special_eff else 1.0
+            return dmg
+        
+        def get_new_damage(pt: Point, atk: float, slow_rate: float, is_special_eff: bool):
+            dmg = pt.total_damage + atk
+            dmg /= min(slow_rate, pt.slow_rate)
+            dmg *= SP_EFF_RATE if (is_special_eff or pt.has_special_eff) else 1.0
+            return dmg
+        
         # 获取覆盖点下标list
         indices = self.range_table.get_coverage(pos_idx, radius)
-        return len(indices) * SEG_DIST
+        total_delta = 0.0
+        for i in indices:
+            pt = self.points[i]
+            old_dmg = get_old_damage(pt)
+            new_dmg = get_new_damage(pt, atk, slow_rate, is_special_eff)
+            delta = new_dmg - old_dmg
+            total_delta += delta
+
+        return total_delta * SEG_DIST  # 乘以路径点间距作为近似积分
+
+    def update_board(self, pos_idx, atk, range, slow_rate, is_special_eff):
+        # 更新某个放置点在某个射程下，覆盖的路径点的总伤害和状态
+        indices = self.range_table.get_coverage(pos_idx, range)
+        for i in indices:
+            pt = self.points[i]
+            pt.total_damage += atk
+            pt.slow_rate = min(pt.slow_rate, slow_rate)
+            if is_special_eff:
+                pt.has_special_eff = True
     
 class Strategy:
     def __init__(self, game_info: GameInfo):
@@ -87,17 +119,14 @@ class Strategy:
         self.edamages = []
         self.geometry = Geometry(game_info)
 
-    def get_edamages(self, atk, tower: TowerInfo, game: GameInfo, slow_rate: float, is_special_eff: bool):
-        mul = atk
-        mul /= tower.attributes['interval']
-
+    def get_edamages(self, atk, range, game: GameInfo, slow_rate: float, is_special_eff: bool):
         res = []
         for idx, t in enumerate(game.placed_towers):
             if t:
                 res.append(0.0)
                 continue
-            sumv = self.geometry.sum_segments_in_circle(idx, tower.attributes['range'])
-            res.append(sumv * mul / slow_rate * (SP_EFF_RATE if is_special_eff else 1.0))
+            sumv = self.geometry.sum_contribution_in_circle(idx, range, atk, slow_rate, is_special_eff)
+            res.append(sumv)
         return res
 
     def get_action(self, enemy: EnemyInfo, game: GameInfo):
@@ -105,6 +134,7 @@ class Strategy:
         max_edamage = 0
         maxid = -1
         maxpl = -1
+        max_attr = {}
 
         for i in range(len(game.store)):
             tower_type = game.store[i]['type']
@@ -160,7 +190,8 @@ class Strategy:
             # special_eff
             is_special_eff = tower.attributes['type'] in enemy.special_eff
 
-            r = self.get_edamages(game.store[i]['damage'], tower, game, slow_rate, is_special_eff)
+            game.store[i]['damage'] /= tower.attributes['interval']
+            r = self.get_edamages(game.store[i]['damage'], tower.attributes['range'], game, slow_rate, is_special_eff)
             # DEBUG_FILE.write(f'Expected damage: max: {max(r)}\n')
             # DEBUG_FILE.write(game.towers[game.store[s]['type']].attributes.__str__()+'\n')
             # DEBUG_FILE.write(str(game.store[s])+'\n')
@@ -168,7 +199,10 @@ class Strategy:
                 max_edamage = max(r)
                 maxid = i
                 maxpl = r.index(max(r))
-        
+                max_attr = { 'atk': game.store[i]['damage'], 'range': tower.attributes['range'], 'slow_rate': slow_rate, 'is_special_eff': is_special_eff }
+
+        # print(f"Decided action: maxedamage={max_edamage}, maxid={maxid}, maxpl={maxpl}, ")
+
         # DEBUG_FILE.write(f'MAX {max_edamage}\n')
         self.refreshed = False
         self.edamages.append(max_edamage)
@@ -180,4 +214,5 @@ class Strategy:
             self.edamages.pop(-1)
             self.refresh_times += 1
             return 'refresh'
+        self.geometry.update_board(maxpl, max_attr['atk'], max_attr['range'], max_attr['slow_rate'], max_attr['is_special_eff'])
         return f"buy {maxid} {maxpl}"
