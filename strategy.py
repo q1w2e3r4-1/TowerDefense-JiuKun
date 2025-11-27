@@ -4,6 +4,7 @@ from visualize import visualize_map_and_points
 PRE_REFRESH = 3
 EXPECT_THRESHOLD = 0.3
 SEG_DIST = 0.1
+SP_EFF_RATE = 1.54
 # DEBUG_FILE = open('debug.log', 'w')
 
 # --- Point class for discrete map points ---
@@ -11,6 +12,9 @@ class Point:
     def __init__(self, x: float, y: float):
         self.x = x
         self.y = y
+        self.slow = 1.0
+        self.has_special_eff = False
+
     def __repr__(self):
         return f"Point({self.x}, {self.y})"
 
@@ -67,7 +71,7 @@ class Geometry:
             self.points.append(Point(x, y))
             pos += step
         # 最后一段结尾不足step直接忽略  
-        visualize_map_and_points(self.map, self.points, 'saved_map_points.png')
+        # visualize_map_and_points(self.map, self.points, 'saved_map_points.png')
         # 预处理每个placement_option和0-20所有整数射程的点贡献
         self.range_table = RangeCoverageTable(game_info.placement_options, self.points, max_radius=20)
 
@@ -83,7 +87,7 @@ class Strategy:
         self.edamages = []
         self.geometry = Geometry(game_info)
 
-    def get_edamages(self, atk, tower: TowerInfo, game: GameInfo):
+    def get_edamages(self, atk, tower: TowerInfo, game: GameInfo, slow_rate: float, is_special_eff: bool):
         mul = atk
         if 'speedDown' in tower.attributes:
             mul /= tower.attributes['speedDown']
@@ -95,11 +99,15 @@ class Strategy:
                 res.append(0.0)
                 continue
             sumv = self.geometry.sum_segments_in_circle(idx, tower.attributes['range'])
-            res.append(sumv * mul)
+            res.append(sumv * mul / slow_rate * (SP_EFF_RATE if is_special_eff else 1.0))
         return res
 
     def get_action(self, enemy: EnemyInfo, game: GameInfo):
         stores: list[int] = []
+        max_edamage = 0
+        maxid = -1
+        maxpl = -1
+
         for i in range(len(game.store)):
             tower_type = game.store[i]['type']
             tower = game.towers[tower_type]
@@ -126,10 +134,11 @@ class Strategy:
                 game.store[i]['damage'] *= 0.8
 
             # slow_eff
+            slow_rate = tower.attributes.get('speedDown', 1.0)
             if enemy.slow_eff[0] == 'Resist':
-                game.store[i]['damage'] *= tower.attributes.get('speedDown', 1.0)
+                slow_rate = 1.0 # immune to slow
             elif enemy.slow_eff[0] == 'Weak':
-                game.store[i]['damage'] /= (tower.attributes.get('speedDown', 1.0) ** 3)
+                slow_rate = tower.attributes.get('speedDown', 1.0) ** 3 
 
             # n_targets
             if tower.attributes['n_targets'] == -1:
@@ -151,21 +160,18 @@ class Strategy:
             game.store[i]['damage'] *= mul
             
             # special_eff
-            if tower.attributes['type'] in enemy.special_eff:
-                game.store[i]['damage'] *= 1.54
+            is_special_eff = tower.attributes['type'] in enemy.special_eff
 
-        max_edamage = 0
-        maxid = -1
-        maxpl = -1
-        for s in stores:
-            r = self.get_edamages(game.store[s]['damage'], game.towers[game.store[s]['type']], game)
+            r = self.get_edamages(game.store[i]['damage'], tower, game, slow_rate, is_special_eff)
             # DEBUG_FILE.write(f'Expected damage: max: {max(r)}\n')
             # DEBUG_FILE.write(game.towers[game.store[s]['type']].attributes.__str__()+'\n')
             # DEBUG_FILE.write(str(game.store[s])+'\n')
-            if game.store[s]['cost'] <= game.coins and max(r) > max_edamage:
+            if game.store[i]['cost'] <= game.coins and max(r) > max_edamage:
                 max_edamage = max(r)
-                maxid = s
+                maxid = i
                 maxpl = r.index(max(r))
+        print(f"Decided action: maxedamage={max_edamage}, maxid={maxid}, maxpl={maxpl}")
+        
         # DEBUG_FILE.write(f'MAX {max_edamage}\n')
         self.refreshed = False
         self.edamages.append(max_edamage)
