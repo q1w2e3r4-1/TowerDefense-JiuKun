@@ -91,6 +91,7 @@ def analyze_predict_scores(score_csv_path):
     total_games = max_gid + 1 if max_gid >= 0 else 0
     sum_avg = 0.0
     valid_games = 0
+    sum_items = [0.0] * 7  # 各项分数累加
     for gid in range(max_gid+1):
         valid = valid_rounds.get(gid, set())
         if len(valid) < 3:
@@ -99,14 +100,21 @@ def analyze_predict_scores(score_csv_path):
         else:
             vals = [sum(scores[gid][k]) for k in ["best_atk_spd", "weak", "resist", "special_eff", "slow_eff", "occurrence", "avg"]]
             sum_avg += vals[-1]
+            for i in range(7):
+                sum_items[i] += vals[i]
             valid_games += 1
         print(f"{gid:>7} | " + " | ".join(f"{v:>10.2f}" for v in vals) + f" | {len(valid)}")
     print("注：缺轮的game_id全部记为0分")
     # 汇总统计
     avg_score = sum_avg / valid_games if valid_games else 0.0
+    avg_items = [x / valid_games if valid_games else 0.0 for x in sum_items]
+    item_names = ["best_atk_spd", "weak", "resist", "special_eff", "slow_eff", "occurrence", "avg"]
     print(f"游戏局数: {total_games}")
     print(f"有效局数: {valid_games}")
     print(f"平均预测分: {avg_score:.2f}")
+    print("各项平均分:")
+    for name, avg in zip(item_names, avg_items):
+        print(f"  {name:>14}: {avg:.2f}")
 
 if __name__ == "__main__":
     if len(sys.argv) == 2:
