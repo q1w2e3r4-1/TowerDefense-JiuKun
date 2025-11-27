@@ -250,7 +250,10 @@ if __name__ == "__main__":
         predictor = DummyPredictor(answer_dir=args.label_dir)
         print("Using answer labels")
     else:
-        predictor = LLMPredictor()  # 需补充模型路径和参数
+        # predictor = LLMPredictor()  # 需补充模型路径和参数
+        predictor = LLMPredictor(
+            {"enable_thinking": True}
+        )
 
     main()
 

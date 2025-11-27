@@ -14,7 +14,8 @@ class LLMPredictor(Predictor):
     def __init__(self, port=8000, host="127.0.0.1", extra_args=None):
         self.port = port
         self.host = host
-        self.extra_args = extra_args or []
+        self.extra_args = extra_args or {}
+        self.enable_thinking = self.extra_args.get("enable_thinking", False)
         self._wait_until_ready()
         self.checker = MonsterAttributeChecker()
         # 查询/v1/models获取model名称
@@ -70,7 +71,6 @@ class LLMPredictor(Predictor):
             ],
             "max_tokens": kargs.get("max_tokens", 8192),
             "temperature": kargs.get("temperature", 0.7),
-            "chat_template_kwargs": {"enable_thinking": False}
         }
         
         fallback_ans = None
@@ -81,6 +81,12 @@ class LLMPredictor(Predictor):
             # chat/completions接口返回的是message.content
             result_text = result["message"]["content"] if "message" in result else result.get("text", "")
             result_text = result_text.replace("'", '"')
+            if self.enable_thinking:
+                answer_idx = result_text.find('[ANSWER]')
+                if answer_idx != -1:
+                    answer = result_text[answer_idx + len('[ANSWER]'):].strip()
+                    result_text = answer
+
             ok, msg = self.checker.check(result_text)
             if ok:
                 return result_text
