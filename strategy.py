@@ -120,6 +120,7 @@ class Strategy:
         self.edamages = []
         self.geometry = Geometry(game_info)
         self.tot_cost = 0
+        self.history_towers = []
 
     def get_edamages(self, atk, range, game: GameInfo, slow_rate: float, is_special_eff: bool):
         res = []
@@ -130,6 +131,62 @@ class Strategy:
             sumv = self.geometry.sum_contribution_in_circle(idx, range, atk, slow_rate, is_special_eff)
             res.append(sumv)
         return res
+
+    def get_damage_for_tower(self, atk, tower, enemy, game):
+        # best_atk_spd
+        if enemy.best_atk_spd[0] == 'Fast':
+            if tower.attributes['interval'] >= 0.30:
+                atk /= 2
+            elif tower.attributes['interval'] <= 0.06:
+                atk *= 1.5
+        elif enemy.best_atk_spd[0] == 'Normal':
+            pass
+        else:
+            if tower.attributes['interval'] <= 0.06:
+                atk /= 1.5
+            elif tower.attributes['interval'] >= 0.30:
+                atk *= 2
+
+        # type advantage
+        if tower.attributes['type'] in enemy.weak:
+            atk *= 1.25
+        elif tower.attributes['type'] in enemy.resist:
+            atk *= 0.8
+
+        # slow_eff
+        slow_rate = tower.attributes.get('speedDown', 1.0)
+        if enemy.slow_eff[0] == 'Resist':
+            slow_rate = 1.0 # immune to slow
+        elif enemy.slow_eff[0] == 'Weak':
+            slow_rate = tower.attributes.get('speedDown', 1.0) ** 3 
+
+        
+        # n_targets
+        if tower.attributes['n_targets'] == -1:
+            tower.attributes['n_targets'] = NUM_DENSE
+        mul = tower.attributes['n_targets']
+        if enemy.occurrence[0] == 'Double':
+            mul = min(mul, 2)
+        elif enemy.occurrence[0] == 'Triple':
+            mul = min(mul, 3)
+        elif enemy.occurrence[0] == 'Dense':
+            if tower.attributes.get('bullet_range', 0):
+                tower.attributes['n_targets'] = NUM_DENSE
+                mul = NUM_DENSE
+            mul = min(mul, NUM_DENSE)
+        elif enemy.occurrence[0] == 'Sparse':
+            mul = min(mul, NUM_DENSE)
+        else: # Single
+            mul = min(mul, 1)
+        atk *= mul
+        atk /= tower.attributes['interval']
+        # atk *= 1 - (atk - 12) * 0.03 # cost penalty
+        
+        # special_eff
+        is_special_eff = tower.attributes['type'] in enemy.special_eff
+
+        r = self.get_edamages(atk, tower.attributes['range'], game, slow_rate, is_special_eff)
+        return r, slow_rate, is_special_eff
 
     def get_action(self, enemy: EnemyInfo, game: GameInfo):
         stores: list[int] = []
@@ -142,60 +199,10 @@ class Strategy:
             tower_type = game.store[i]['type']
             tower = game.towers[tower_type]
             stores.append(i)
-
-            # best_atk_spd
-            if enemy.best_atk_spd[0] == 'Fast':
-                if tower.attributes['interval'] >= 0.30:
-                    game.store[i]['damage'] /= 2
-                elif tower.attributes['interval'] <= 0.06:
-                    game.store[i]['damage'] *= 1.5
-            elif enemy.best_atk_spd[0] == 'Normal':
-                pass
-            else:
-                if tower.attributes['interval'] <= 0.06:
-                    game.store[i]['damage'] /= 1.5
-                elif tower.attributes['interval'] >= 0.30:
-                    game.store[i]['damage'] *= 2
-
-            # type advantage
-            if tower.attributes['type'] in enemy.weak:
-                game.store[i]['damage'] *= 1.25
-            elif tower.attributes['type'] in enemy.resist:
-                game.store[i]['damage'] *= 0.8
-
-            # slow_eff
-            slow_rate = tower.attributes.get('speedDown', 1.0)
-            if enemy.slow_eff[0] == 'Resist':
-                slow_rate = 1.0 # immune to slow
-            elif enemy.slow_eff[0] == 'Weak':
-                slow_rate = tower.attributes.get('speedDown', 1.0) ** 3 
-
+            self.history_towers.append(game.store[i])
+            atk = game.store[i]['damage']
             
-            # n_targets
-            if tower.attributes['n_targets'] == -1:
-                tower.attributes['n_targets'] = NUM_DENSE
-            mul = tower.attributes['n_targets']
-            if enemy.occurrence[0] == 'Double':
-                mul = min(mul, 2)
-            elif enemy.occurrence[0] == 'Triple':
-                mul = min(mul, 3)
-            elif enemy.occurrence[0] == 'Dense':
-                if tower.attributes.get('bullet_range', 0):
-                    tower.attributes['n_targets'] = NUM_DENSE
-                    mul = NUM_DENSE
-                mul = min(mul, NUM_DENSE)
-            elif enemy.occurrence[0] == 'Sparse':
-                mul = min(mul, NUM_DENSE)
-            else: # Single
-                mul = min(mul, 1)
-            game.store[i]['damage'] *= mul
-            # game.store[i]['damage'] *= 1 - (game.store[i]['cost'] - 12) * 0.03 # cost penalty
-            
-            # special_eff
-            is_special_eff = tower.attributes['type'] in enemy.special_eff
-
-            game.store[i]['damage'] /= tower.attributes['interval']
-            r = self.get_edamages(game.store[i]['damage'], tower.attributes['range'], game, slow_rate, is_special_eff)
+            r, slow_rate, is_special_eff = self.get_damage_for_tower(atk, tower, enemy, game)
             # DEBUG_FILE.write(f'Expected damage: max: {max(r)}\n')
             # DEBUG_FILE.write(game.towers[game.store[s]['type']].attributes.__str__()+'\n')
             # DEBUG_FILE.write(str(game.store[s])+'\n')
@@ -203,7 +210,7 @@ class Strategy:
                 max_edamage = max(r)
                 maxid = i
                 maxpl = r.index(max(r))
-                max_attr = { 'atk': game.store[i]['damage'], 'range': tower.attributes['range'], 'slow_rate': slow_rate, 'is_special_eff': is_special_eff, 'cost': game.store[i]['cost']}
+                max_attr = { 'atk': atk, 'range': tower.attributes['range'], 'slow_rate': slow_rate, 'is_special_eff': is_special_eff, 'cost': game.store[i]['cost']}
 
         # print(f"Decided action: maxedamage={max_edamage}, maxid={maxid}, maxpl={maxpl}, ")
 
