@@ -187,7 +187,7 @@ class Strategy:
         is_special_eff = tower.attributes['type'] in enemy.special_eff
 
         r = self.get_edamages(atk, tower.attributes['range'], game, slow_rate, is_special_eff)
-        return r, slow_rate, is_special_eff
+        return r, atk, slow_rate, is_special_eff
 
     def get_action(self, enemy: EnemyInfo, game: GameInfo):
         stores: list[int] = []
@@ -203,7 +203,7 @@ class Strategy:
             self.history_towers.append(game.store[i])
             atk = game.store[i]['damage']
             
-            r, slow_rate, is_special_eff = self.get_damage_for_tower(atk, tower, enemy, game)
+            r, atk, slow_rate, is_special_eff = self.get_damage_for_tower(atk, tower, enemy, game)
             # DEBUG_FILE.write(f'Expected damage: max: {max(r)}\n')
             # DEBUG_FILE.write(game.towers[game.store[s]['type']].attributes.__str__()+'\n')
             # DEBUG_FILE.write(str(game.store[s])+'\n')
@@ -235,6 +235,6 @@ class Strategy:
         ret = []
         for t in self.history_towers:
             atk = t['damage']
-            r, _, _ = self.get_damage_for_tower(atk, game.towers[t['type']], enemy, game)
+            r, _, _, _= self.get_damage_for_tower(atk, game.towers[t['type']], enemy, game)
             ret.append(max(r))
         return ret, self.total_dmg
