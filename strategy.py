@@ -2,6 +2,7 @@ from game_info import EnemyInfo, TowerInfo, GameInfo
 from math import sqrt
 from visualize import visualize_map_and_points
 import numpy as np
+import random
 PRE_REFRESH = 3
 EXPECT_THRESHOLD = 0.3
 SEG_DIST = 0.3
@@ -125,6 +126,7 @@ class Strategy:
         self.total_dmg = 0.0
         self.num_chosen = 0
         self.need_recalc = True
+        self.buffer_dmgs = []
 
     def get_edamages(self, atk, range, game: GameInfo, slow_rate: float, is_special_eff: bool):
         res = []
@@ -198,6 +200,7 @@ class Strategy:
         maxid = -1
         maxpl = -1
         max_attr = {}
+        shop = []
 
         for i in range(len(game.store)):
             tower_type = game.store[i]['type']
@@ -207,6 +210,10 @@ class Strategy:
             atk = game.store[i]['damage']
 
             r, atk, slow_rate, is_special_eff = self.get_damage_for_tower(atk, tower, enemy, game)
+            shop.append( (max(r), game.store[i]['cost']) )
+            self.buffer_dmgs.append(max(r))
+            # print("add to shop:", i, max(r), game.store[i]['cost'])
+
             if game.store[i]['cost'] <= game.coins and max(r) > max_edamage:
                 max_edamage = max(r)
                 maxid = i
@@ -214,6 +221,7 @@ class Strategy:
                 max_attr = { 'atk': atk, 'range': tower.attributes['range'], 'slow_rate': slow_rate, 'is_special_eff': is_special_eff, 'cost': game.store[i]['cost']}
         # print(f"Decided action: maxedamage={max_edamage}, maxid={maxid}, maxpl={maxpl}")
 
+        assert len(self.history_towers) == len(self.buffer_dmgs), "History towers and buffer damages length mismatch"
         # 计算当前max_edamage的gain在history_gain中的百分位
         self.edamages.append(max_edamage)
         self.edamages.sort()
@@ -221,21 +229,40 @@ class Strategy:
             self.refresh_times += 1
             return 'refresh'
         
-        if game.coins < -1:
-            pass
+        if game.coins < 60:
+            action, maxid, exp_score = self.plan_dp_action(enemy, game, shop, num_sample=200, shop_size=20, num_chosen=self.num_chosen)
+            # print(f"coins = {game.coins}, dp action = {action}, exp_score = {exp_score}")
+            if action == 'refresh':
+                self.refresh_times += 1
+                return 'refresh'
+            else:
+                # buy
+                atk = game.store[maxid]['damage']
+                tower = game.towers[game.store[maxid]['type']]
+                r, atk, slow_rate, is_special_eff = self.get_damage_for_tower(atk, tower, enemy, game)  
+                maxpl = r.index(max(r))
+
+                # update
+                self.geometry.update_board(maxpl, atk, tower.attributes['range'], slow_rate, is_special_eff)
+                self.tot_cost += game.store[maxid]['cost']
+                self.total_dmg += max(r)
+                self.need_recalc = True
+                self.num_chosen += 1
+                # print("+", max(r))
+                return f"buy {maxid} {maxpl}"
         else:
             if max_edamage < self.edamages[-1] * EXPECT_THRESHOLD:
                 self.edamages.pop(-1)
                 self.refresh_times += 1
                 return 'refresh'
             
-        # buy
-        self.geometry.update_board(maxpl, max_attr['atk'], max_attr['range'], max_attr['slow_rate'], max_attr['is_special_eff'])
-        self.tot_cost += max_attr['cost']
-        self.total_dmg += max_edamage
-        self.need_recalc = True
-        self.num_chosen += 1
-        return f"buy {maxid} {maxpl}"
+            # buy
+            self.geometry.update_board(maxpl, max_attr['atk'], max_attr['range'], max_attr['slow_rate'], max_attr['is_special_eff'])
+            self.tot_cost += max_attr['cost']
+            self.total_dmg += max_edamage
+            self.need_recalc = True
+            self.num_chosen += 1
+            return f"buy {maxid} {maxpl}"
 
     def get_history_dmgs(self, enemy: EnemyInfo, game: GameInfo):
         if not self.need_recalc:
@@ -264,3 +291,68 @@ class Strategy:
         for delta in history_dmgs:
             gains.append(self.cal_gain(base_sum, delta))
         return gains
+
+    def dp_expected_score_action(self, coins, items:list[tuple], shop, num_sample=200, shop_size=20):
+        min_price = min([c for _, c in items], default=9999)
+        memo = {}
+        def dp(c):
+            if c < min_price:
+                return 0
+            if c in memo:
+                return memo[c]
+            sample_maxes = []
+            for _ in range(num_sample):
+                sampled_shop = random.sample(items, min(shop_size, len(items)))
+                local_max = 0
+                # 买
+                for score, price in sampled_shop:
+                    if price <= c:
+                        total = score + dp(c - price)
+                        if total > local_max:
+                            local_max = total
+                # 刷新
+                if c > 1:
+                    total = dp(c - 1)
+                    if total > local_max:
+                        local_max = total
+                sample_maxes.append(local_max)
+            avg_score = sum(sample_maxes) / num_sample if sample_maxes else 0
+            memo[c] = avg_score
+            return avg_score
+        # 只对当前shop做决策
+        best_score = -float('inf')
+        best_idx = -1
+        for idx, (score, price) in enumerate(shop):
+            if price <= coins:
+                total = score + dp(coins - price)
+                # print (f"Trying buy item idx={idx} (score={score}, price={price}): total expected score(dp{coins - price}) = {dp(coins - price)}")
+                if total > best_score:
+                    best_score = total
+                    best_idx = idx
+
+        # print(memo)
+        # print(f"Best buy idx={best_idx} with expected total score={best_score}")
+        # input()
+        # 尝试刷新
+        if coins > 1:
+            total = dp(coins - 1)
+            if total > best_score:
+                return 'refresh', -1, total
+        return ('buy ', best_idx, best_score) if best_idx != -1 else ('refresh', -1, best_score)
+
+    def plan_dp_action(self, enemy: EnemyInfo, game: GameInfo, shop: list[tuple], num_sample=200, shop_size=20, num_chosen=0):
+        # 1. 获取历史伤害和cost
+        history_dmgs, _ = self.get_history_dmgs(enemy, game)
+        costs = [t['cost'] for t in self.history_towers]
+        pairs = list(zip(history_dmgs, costs))
+        # 2. 删去damage最高的num_chosen个
+        pairs = sorted(pairs, key=lambda x: -x[0])
+        pairs = pairs[num_chosen:]
+        coins = game.coins
+        # 当前商店
+        if coins < min([c for _, c in pairs], default=9999):
+            return 'refresh', -1, 0
+        action = self.dp_expected_score_action(coins, pairs, shop, num_sample=num_sample, shop_size=shop_size)
+        # print("!!!", action)
+        # print(sorted(shop))
+        return action
