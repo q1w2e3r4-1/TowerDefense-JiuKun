@@ -2,7 +2,7 @@ import re
 import os
 import matplotlib.pyplot as plt
 
-record_dir = "record_1128_1344"  # 你的文件夹路径
+record_dir = "record_1128_1723"  # 你的文件夹路径
 pattern = re.compile(r"Round over\. Used money: (\d+) / (\d+), Build (\d+) towers\.")
 
 totals = []
@@ -27,5 +27,5 @@ if totals and builds:
     plt.ylabel('Build Towers')
     plt.title('Total vs Build Scatter Plot')
     plt.grid(True)
-    plt.savefig('total_vs_build2.png')
+    plt.savefig('total_vs_build3.png')
     plt.close()

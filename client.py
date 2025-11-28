@@ -155,6 +155,7 @@ def main_loop():
             game_info.set_coins(resp.get('n_coins', 0))
             if 'store' in resp:
                 recorder.write("Store: " + str(resp["store"]), debug=DEBUG)
+                recorder.write("shop size = " + str(len(resp["store"])), debug=DEBUG)
                 game_info.update_store(resp['store'])
         
         if resp.get("game_over"):

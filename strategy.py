@@ -9,6 +9,8 @@ SEG_DIST = 0.3
 SP_EFF_RATE = 1.54
 NUM_DENSE = 6
 PERCENTILE_THRESHOLD = 0.75
+DP_SAMPLE_NUM = 300
+DP_START_COINS = 60
 # DEBUG_FILE = open('debug.log', 'w')
 
 # --- Point class for discrete map points ---
@@ -229,8 +231,8 @@ class Strategy:
             self.refresh_times += 1
             return 'refresh'
         
-        if game.coins < 60:
-            action, maxid, exp_score = self.plan_dp_action(enemy, game, shop, num_sample=200, shop_size=20, num_chosen=self.num_chosen)
+        if game.coins < DP_START_COINS:
+            action, maxid, exp_score = self.plan_dp_action(enemy, game, shop, num_sample=DP_SAMPLE_NUM, num_chosen=self.num_chosen)
             # print(f"coins = {game.coins}, dp action = {action}, exp_score = {exp_score}")
             if action == 'refresh':
                 self.refresh_times += 1
@@ -292,7 +294,7 @@ class Strategy:
             gains.append(self.cal_gain(base_sum, delta))
         return gains
 
-    def dp_expected_score_action(self, coins, items:list[tuple], shop, num_sample=200, shop_size=20):
+    def dp_expected_score_action(self, coins, items:list[tuple], shop, num_sample=DP_SAMPLE_NUM):
         min_price = min([c for _, c in items], default=9999)
         memo = {}
         def dp(c):
@@ -302,7 +304,9 @@ class Strategy:
                 return memo[c]
             sample_maxes = []
             for _ in range(num_sample):
-                sampled_shop = random.sample(items, min(shop_size, len(items)))
+                # curr_shop_size = random.randint(16, 30)
+                curr_shop_size = 20
+                sampled_shop = random.sample(items, curr_shop_size)
                 local_max = 0
                 # 买
                 for score, price in sampled_shop:
@@ -340,7 +344,7 @@ class Strategy:
                 return 'refresh', -1, total
         return ('buy ', best_idx, best_score) if best_idx != -1 else ('refresh', -1, best_score)
 
-    def plan_dp_action(self, enemy: EnemyInfo, game: GameInfo, shop: list[tuple], num_sample=200, shop_size=20, num_chosen=0):
+    def plan_dp_action(self, enemy: EnemyInfo, game: GameInfo, shop: list[tuple], num_sample=DP_SAMPLE_NUM, num_chosen=0):
         # 1. 获取历史伤害和cost
         history_dmgs, _ = self.get_history_dmgs(enemy, game)
         costs = [t['cost'] for t in self.history_towers]
@@ -352,7 +356,7 @@ class Strategy:
         # 当前商店
         if coins < min([c for _, c in pairs], default=9999):
             return 'refresh', -1, 0
-        action = self.dp_expected_score_action(coins, pairs, shop, num_sample=num_sample, shop_size=shop_size)
+        action = self.dp_expected_score_action(coins, pairs, shop, num_sample=num_sample)
         # print("!!!", action)
         # print(sorted(shop))
         return action
