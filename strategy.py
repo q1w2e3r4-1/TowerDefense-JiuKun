@@ -3,8 +3,9 @@ from math import sqrt
 from visualize import visualize_map_and_points
 PRE_REFRESH = 3
 EXPECT_THRESHOLD = 0.3
-SEG_DIST = 0.1
+SEG_DIST = 0.3
 SP_EFF_RATE = 1.54
+NUM_DENSE = 6
 # DEBUG_FILE = open('debug.log', 'w')
 
 # --- Point class for discrete map points ---
@@ -118,6 +119,7 @@ class Strategy:
         self.refresh_times = 0
         self.edamages = []
         self.geometry = Geometry(game_info)
+        self.tot_cost = 0
 
     def get_edamages(self, atk, range, game: GameInfo, slow_rate: float, is_special_eff: bool):
         res = []
@@ -168,9 +170,10 @@ class Strategy:
             elif enemy.slow_eff[0] == 'Weak':
                 slow_rate = tower.attributes.get('speedDown', 1.0) ** 3 
 
+            
             # n_targets
             if tower.attributes['n_targets'] == -1:
-                tower.attributes['n_targets'] = 6
+                tower.attributes['n_targets'] = NUM_DENSE
             mul = tower.attributes['n_targets']
             if enemy.occurrence[0] == 'Double':
                 mul = min(mul, 2)
@@ -178,14 +181,15 @@ class Strategy:
                 mul = min(mul, 3)
             elif enemy.occurrence[0] == 'Dense':
                 if tower.attributes.get('bullet_range', 0):
-                    tower.attributes['n_targets'] = 6
-                    mul = 6
-                mul = min(mul, 6)
+                    tower.attributes['n_targets'] = NUM_DENSE
+                    mul = NUM_DENSE
+                mul = min(mul, NUM_DENSE)
             elif enemy.occurrence[0] == 'Sparse':
-                mul = min(mul, 6)
+                mul = min(mul, NUM_DENSE)
             else: # Single
                 mul = min(mul, 1)
             game.store[i]['damage'] *= mul
+            # game.store[i]['damage'] *= 1 - (game.store[i]['cost'] - 12) * 0.03 # cost penalty
             
             # special_eff
             is_special_eff = tower.attributes['type'] in enemy.special_eff
@@ -199,7 +203,7 @@ class Strategy:
                 max_edamage = max(r)
                 maxid = i
                 maxpl = r.index(max(r))
-                max_attr = { 'atk': game.store[i]['damage'], 'range': tower.attributes['range'], 'slow_rate': slow_rate, 'is_special_eff': is_special_eff }
+                max_attr = { 'atk': game.store[i]['damage'], 'range': tower.attributes['range'], 'slow_rate': slow_rate, 'is_special_eff': is_special_eff, 'cost': game.store[i]['cost']}
 
         # print(f"Decided action: maxedamage={max_edamage}, maxid={maxid}, maxpl={maxpl}, ")
 
@@ -210,9 +214,10 @@ class Strategy:
         if maxid == -1 or self.refresh_times < PRE_REFRESH:
             self.refresh_times += 1
             return 'refresh'
-        if max_edamage < self.edamages[-1] * EXPECT_THRESHOLD:
+        if max_edamage < self.edamages[-1] * EXPECT_THRESHOLD and game.coins != 12: # exactly money to buy the cheapest tower
             self.edamages.pop(-1)
             self.refresh_times += 1
             return 'refresh'
         self.geometry.update_board(maxpl, max_attr['atk'], max_attr['range'], max_attr['slow_rate'], max_attr['is_special_eff'])
+        self.tot_cost += max_attr['cost']
         return f"buy {maxid} {maxpl}"

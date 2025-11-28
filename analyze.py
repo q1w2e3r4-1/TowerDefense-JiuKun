@@ -29,46 +29,42 @@ def analyze_score_csv(record_dir):
     print(f"平均游戏得分: {avg_game:.2f}")
 
 
-def compare_score_csv(dir_new, dir_old):
-    def read_scores(d):
-        path = os.path.join(d, 'score.csv')
-        scores = {}
-        if not os.path.exists(path):
-            print(f"score.csv not found in {d}")
-            return scores
+
+# 比较两个predict_scores.csv，输出每局每项分数的delta（相同则留空，否则显示delta）
+def compare_predict_scores_csv(csv1, csv2):
+    # 读取csv为dict: (game_id, round_id) -> {label: value}
+    def read_predict_scores(path):
+        data = {}
         with open(path, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                try:
-                    gid = row['game_id']
-                    scores[gid] = {
-                        'score_pred': float(row['score_pred']),
-                        'score_game': float(row['score_game'])
-                    }
-                except Exception:
-                    continue
-        return scores
+                gid = int(row['game_id'])
+                rid = int(row['round_id'])
+                data[(gid, rid)] = {k: float(row[k]) for k in ['best_atk_spd', 'weak', 'resist', 'special_eff', 'slow_eff', 'occurrence']}
+        return data
 
-    scores_new = read_scores(dir_new)
-    scores_old = read_scores(dir_old)
-    all_gids = set(scores_new.keys()) | set(scores_old.keys())
-    print(f"对比 {dir_new}/score.csv 与 {dir_old}/score.csv")
-    print(f"共计对局: {len(all_gids)}")
-    print(f"game_id | new_pred | old_pred | Δpred | 状态_pred | new_game | old_game | Δgame | 状态_game")
-    print("-"*100)
-    for gid in sorted(all_gids, key=lambda x: int(x)):
-        n = scores_new.get(gid)
-        o = scores_old.get(gid)
-        if n and o:
-            delta_pred = n['score_pred'] - o['score_pred']
-            delta_game = n['score_game'] - o['score_game']
-            status_pred = "提升" if delta_pred > 0 else ("下降" if delta_pred < 0 else "持平")
-            status_game = "提升" if delta_game > 0 else ("下降" if delta_game < 0 else "持平")
-            print(f"{gid:>7} | {n['score_pred']:^8.2f} | {o['score_pred']:^8.2f} | {delta_pred:^6.2f} | {status_pred:^8} | {n['score_game']:^8.2f} | {o['score_game']:^8.2f} | {delta_game:^6.2f} | {status_game:^8}")
-        elif n and not o:
-            print(f"{gid:>7} | {n['score_pred']:^8.2f} | {'-':^8} | {'-':^6} | {'新增':^8} | {n['score_game']:^8.2f} | {'-':^8} | {'-':^6} | {'新增':^8}")
-        elif o and not n:
-            print(f"{gid:>7} | {'-':^8} | {o['score_pred']:^8.2f} | {'-':^6} | {'移除':^8} | {'-':^8} | {o['score_game']:^8.2f} | {'-':^6} | {'移除':^8}")
+    d1 = read_predict_scores(csv1)
+    d2 = read_predict_scores(csv2)
+    labels = ['best_atk_spd', 'weak', 'resist', 'special_eff', 'slow_eff', 'occurrence']
+    header = f"{'game_id':>7} | {'round':>5} | " + ' | '.join(f"{label:>12}" for label in labels)
+    print(header)
+    print('-' * len(header))
+    all_keys = sorted(set(d1.keys()) | set(d2.keys()))
+    for key in all_keys:
+        row1 = d1.get(key, {})
+        row2 = d2.get(key, {})
+        out = [f"{key[0]:>7}", f"{key[1]:>5}"]
+        for label in labels:
+            v1 = row1.get(label)
+            v2 = row2.get(label)
+            if v1 is not None and v2 is not None:
+                if abs(v1 - v2) < 1e-8:
+                    out.append(f"{'':>12}")
+                else:
+                    out.append(f"{v1-v2:>12.4f}")
+            else:
+                out.append(f"{'':>12}")
+        print(' | '.join(out))
 
 def analyze_predict_scores(score_csv_path):
     # 读取分数
@@ -128,6 +124,12 @@ if __name__ == "__main__":
         else:
             print(f"{score_csv} 和 {record_csv} 都不存在，无法分析分数。")
     elif len(sys.argv) == 4 and sys.argv[1] == "--cmp":
-        compare_score_csv(sys.argv[2], sys.argv[3])
+        # 优先比较predict_scores.csv
+        csv1 = os.path.join(sys.argv[2], 'predict_scores.csv')
+        csv2 = os.path.join(sys.argv[3], 'predict_scores.csv')
+        if os.path.exists(csv1) and os.path.exists(csv2):
+            compare_predict_scores_csv(csv1, csv2)
+        else:
+            print('predict_scores.csv not found in one of the directories.')
     else:
         print("用法: python analyze.py <record_dir> 或 python analyze.py --cmp <dir_new> <dir_old>")

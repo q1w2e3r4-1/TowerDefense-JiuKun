@@ -40,6 +40,7 @@ recorder = None
 strategy = None
 game_info = GameInfo()
 predictor = Predictor()
+round_coins = 0
 
 @sio.event
 def connect():
@@ -66,9 +67,16 @@ def on_response(data):
     response_data = data
     response_event.set()
 
+def round_over():
+    global strategy, game_info, recorder, round_coins
+    if strategy is None:
+        return
+    count = sum(1 for x in game_info.placed_towers if x is not None)
+    recorder.write(f"Round over. Used money: {strategy.tot_cost} / {round_coins}, Build {count} towers.", debug=DEBUG)
 @sio.on("end")
 def on_end(data):
     global game_end
+    round_over()
     recorder.write("[GAME END] " + str(data), debug=DEBUG)
     if RECORD_DIR != "records": # batch mode
         with open(f"{RECORD_DIR}/score.csv", "a", encoding="utf-8") as f:
@@ -78,7 +86,7 @@ def on_end(data):
 def main_loop():
     global strategy
     global game_over, action_mode
-    global recorder, game_info
+    global recorder, game_info, round_coins
     assert recorder is not None
 
     while not game_end:
@@ -97,6 +105,8 @@ def main_loop():
             if "enemy_description" in resp:
                 recorder.write(f"Enemy Description: {resp['enemy_description']}", debug=DEBUG)
             recorder.write(f"Coins: {resp.get('n_coins', '?')}", debug=DEBUG)
+            round_coins = resp.get('n_coins', 0)
+            round_over()
             # 更新game_info
             game_info.set_round(resp.get("i_round", 0))
             if "enemy_name" in resp or "enemy_description" in resp:
@@ -252,7 +262,7 @@ if __name__ == "__main__":
     else:
         # predictor = LLMPredictor()  # 需补充模型路径和参数
         predictor = LLMPredictor(
-            {"enable_thinking": True}
+            extra_args={"enable_thinking": True}
         )
 
     main()

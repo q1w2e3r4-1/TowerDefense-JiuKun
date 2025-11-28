@@ -119,4 +119,4 @@ if __name__ == "__main__":
     analyze_multilabel(args.label_dir, args.pred_dir, "special_eff", elements)
 
 # e.g python data_analyze.py --label_dir data/game/val --pred_dir data/game/lora-4B
-# python data_analyze.py --label_dir data/game/val --pred_dir record_1125_1837
+# python data_analyze.py --label_dir predict_1128_0008 --pred_dir predict_1128_0019
