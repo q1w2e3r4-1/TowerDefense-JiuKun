@@ -121,6 +121,7 @@ class Strategy:
         self.geometry = Geometry(game_info)
         self.tot_cost = 0
         self.history_towers = []
+        self.total_dmg = 0.0
 
     def get_edamages(self, atk, range, game: GameInfo, slow_rate: float, is_special_eff: bool):
         res = []
@@ -227,4 +228,13 @@ class Strategy:
             return 'refresh'
         self.geometry.update_board(maxpl, max_attr['atk'], max_attr['range'], max_attr['slow_rate'], max_attr['is_special_eff'])
         self.tot_cost += max_attr['cost']
+        self.total_dmg += max_edamage
         return f"buy {maxid} {maxpl}"
+
+    def get_history_dmgs(self, enemy: EnemyInfo, game: GameInfo):
+        ret = []
+        for t in self.history_towers:
+            atk = t['damage']
+            r, _, _ = self.get_damage_for_tower(atk, game.towers[t['type']], enemy, game)
+            ret.append(max(r))
+        return ret, self.total_dmg

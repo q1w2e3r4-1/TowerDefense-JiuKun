@@ -17,12 +17,12 @@ with open(score_csv_path, 'w', encoding='utf-8') as f:
 
 import threading
 def func1():
-    for gid in range(0, 10):
+    for gid in range(0, 100):
         print(f'Running game_id: {gid}')
         # os.system(f'python client.py  --action auto --game_id {gid} --record_dir {record_dir}')
         os.system(f'python client.py  --action auto --game_id {gid} --record_dir {record_dir} --label_dir ./data/game/lora-4B')
 def func2():
-    for gid in range(100, 110):
+    for gid in range(100, 200):
         print(f'Running game_id: {gid}')
         # os.system(f'python client.py  --action auto --game_id {gid} --record_dir {record_dir}')
         os.system(f'python client.py  --action auto --game_id {gid} --record_dir {record_dir} --label_dir ./data/game/lora-4B')
