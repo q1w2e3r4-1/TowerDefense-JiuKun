@@ -1,11 +1,13 @@
 from game_info import EnemyInfo, TowerInfo, GameInfo
 from math import sqrt
 from visualize import visualize_map_and_points
+import numpy as np
 PRE_REFRESH = 3
 EXPECT_THRESHOLD = 0.3
 SEG_DIST = 0.3
 SP_EFF_RATE = 1.54
 NUM_DENSE = 6
+PERCENTILE_THRESHOLD = 0.75
 # DEBUG_FILE = open('debug.log', 'w')
 
 # --- Point class for discrete map points ---
@@ -115,13 +117,14 @@ class Geometry:
     
 class Strategy:
     def __init__(self, game_info: GameInfo):
-        self.refreshed = False
         self.refresh_times = 0
         self.edamages = []
         self.geometry = Geometry(game_info)
         self.tot_cost = 0
         self.history_towers = []
         self.total_dmg = 0.0
+        self.num_chosen = 0
+        self.need_recalc = True
 
     def get_edamages(self, atk, range, game: GameInfo, slow_rate: float, is_special_eff: bool):
         res = []
@@ -202,39 +205,62 @@ class Strategy:
             stores.append(i)
             self.history_towers.append(game.store[i])
             atk = game.store[i]['damage']
-            
+
             r, atk, slow_rate, is_special_eff = self.get_damage_for_tower(atk, tower, enemy, game)
-            # DEBUG_FILE.write(f'Expected damage: max: {max(r)}\n')
-            # DEBUG_FILE.write(game.towers[game.store[s]['type']].attributes.__str__()+'\n')
-            # DEBUG_FILE.write(str(game.store[s])+'\n')
             if game.store[i]['cost'] <= game.coins and max(r) > max_edamage:
                 max_edamage = max(r)
                 maxid = i
                 maxpl = r.index(max(r))
                 max_attr = { 'atk': atk, 'range': tower.attributes['range'], 'slow_rate': slow_rate, 'is_special_eff': is_special_eff, 'cost': game.store[i]['cost']}
+        # print(f"Decided action: maxedamage={max_edamage}, maxid={maxid}, maxpl={maxpl}")
 
-        # print(f"Decided action: maxedamage={max_edamage}, maxid={maxid}, maxpl={maxpl}, ")
-
-        # DEBUG_FILE.write(f'MAX {max_edamage}\n')
-        self.refreshed = False
+        # 计算当前max_edamage的gain在history_gain中的百分位
         self.edamages.append(max_edamage)
         self.edamages.sort()
         if maxid == -1 or self.refresh_times < PRE_REFRESH:
             self.refresh_times += 1
             return 'refresh'
-        if max_edamage < self.edamages[-1] * EXPECT_THRESHOLD and game.coins != 12: # exactly money to buy the cheapest tower
-            self.edamages.pop(-1)
-            self.refresh_times += 1
-            return 'refresh'
+        
+        if game.coins < -1:
+            pass
+        else:
+            if max_edamage < self.edamages[-1] * EXPECT_THRESHOLD:
+                self.edamages.pop(-1)
+                self.refresh_times += 1
+                return 'refresh'
+            
+        # buy
         self.geometry.update_board(maxpl, max_attr['atk'], max_attr['range'], max_attr['slow_rate'], max_attr['is_special_eff'])
         self.tot_cost += max_attr['cost']
         self.total_dmg += max_edamage
+        self.need_recalc = True
+        self.num_chosen += 1
         return f"buy {maxid} {maxpl}"
 
     def get_history_dmgs(self, enemy: EnemyInfo, game: GameInfo):
+        if not self.need_recalc:
+            return self.buffer_dmgs, self.total_dmg
+        
         ret = []
         for t in self.history_towers:
             atk = t['damage']
             r, _, _, _= self.get_damage_for_tower(atk, game.towers[t['type']], enemy, game)
             ret.append(max(r))
+        self.buffer_dmgs = ret
+        self.need_recalc = False
         return ret, self.total_dmg
+    
+    def cal_gain(sekf, base_sum, delta):
+        log_base = 1.008
+        prev_score = np.log(base_sum + 1) / np.log(log_base)
+        curr_score = np.log(base_sum + delta + 1) / np.log(log_base)
+        return curr_score - prev_score
+    
+    def get_tower_gains(self, enemy: EnemyInfo, game: GameInfo):
+        gains = []
+        history_dmgs, base_sum = self.get_history_dmgs(enemy, game)
+        history_dmgs = sorted(history_dmgs, reverse=True)
+
+        for delta in history_dmgs:
+            gains.append(self.cal_gain(base_sum, delta))
+        return gains

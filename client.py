@@ -145,10 +145,12 @@ def main_loop():
             if resp['n_coins'] <= 50 and first_less_than_50:
                 first_less_than_50 = False
                 ls, total_dmg = strategy.get_history_dmgs(EnemyInfo(name='', **label_pred), game_info)
+                strategy.get_tower_gains(EnemyInfo(name='', **label_pred), game_info)
                 recorder.write(f"History tower damages(coin <= 50): {ls}; Total damage: {total_dmg}", debug=DEBUG)
             if resp['n_coins'] <= 100 and first_less_than_100:
                 first_less_than_100 = False
                 ls, total_dmg = strategy.get_history_dmgs(EnemyInfo(name='', **label_pred), game_info)
+                strategy.get_tower_gains(EnemyInfo(name='', **label_pred), game_info)
                 recorder.write(f"History tower damages(coin <= 100): {ls}; Total damage: {total_dmg}", debug=DEBUG)
             game_info.set_coins(resp.get('n_coins', 0))
             if 'store' in resp:
