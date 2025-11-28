@@ -213,3 +213,5 @@ predict_*/
 *.out
 llamaboard_cache/
 cot/data.npy
+Qwen3-4B
+lora-v2

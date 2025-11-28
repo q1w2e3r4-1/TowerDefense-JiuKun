@@ -74,7 +74,7 @@ class LLMPredictor(Predictor):
         }
         
         fallback_ans = None
-        for attempt in range(3):
+        for attempt in range(5):
             resp = requests.post(url, json=payload)
             resp.raise_for_status()
             result = resp.json()["choices"][0]
@@ -94,9 +94,22 @@ class LLMPredictor(Predictor):
                 ok1, msg1 = self.checker.check(result_text, level=1)
                 if ok1:
                     fallback_ans = result_text
-                print(f"[LLMPredictor] Checker failed: {msg}. Retrying ({attempt+1}/3)...")
+                print(f"[LLMPredictor] Checker failed: {msg}. Retrying ({attempt+1}/5)...")
                 time.sleep(1)
-        print(f"[LLMPredictor] Checker failed after 3 attempts: {msg}, fallback to {fallback_ans}")
+        print(f"[LLMPredictor] Checker failed after 5 attempts: {msg}, fallback to {fallback_ans}")
+        if fallback_ans is None:
+            print("Noooo, we have to use the dummy answer")
+            input()
+            label_pred = {
+                'best_atk_spd': ['Normal'], 
+                'weak': ['Fire', 'Ice', 'Poison'], 
+                'resist': ['Blunt', 'Lightning'], 
+                'special_eff': ['Fire'], 
+                'slow_eff': ['Normal'],
+                'occurrence': ['Triple'],
+            }
+            return json.dumps(label_pred, ensure_ascii=False)
+
         return fallback_ans
     
     
