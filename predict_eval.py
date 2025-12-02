@@ -71,9 +71,13 @@ if __name__ == "__main__":
     import numpy as np
     from finetune.prompt import generate_system_prompt
 
-    names = np.load("data/game/val/names.npy", allow_pickle=True)
-    labels = np.load("data/game/val/labels.npy", allow_pickle=True)
-    data = np.load("data/game/val/data.npy", allow_pickle=True)
+    # names = np.load("data/game/val/names.npy", allow_pickle=True)
+    # labels = np.load("data/game/val/labels.npy", allow_pickle=True)
+    # data = np.load("data/game/val/data.npy", allow_pickle=True)
+
+    names = np.load("data/data/names.npy", allow_pickle=True)
+    labels = np.load("data/data/labels.npy", allow_pickle=True)
+    data = np.load("data/data/data.npy", allow_pickle=True)
 
     prompts = []
     game_ids = []
@@ -89,6 +93,7 @@ if __name__ == "__main__":
             round_ids.append(j + 1)
 
     vllm = LLMPredictor()
-    dummy = DummyPredictor(answer_dir="data/game/val")
+    # dummy = DummyPredictor(answer_dir="data/game/val")
+    dummy = DummyPredictor(answer_dir="data/data")
     batch_eval(vllm, dummy, prompts, game_ids, round_ids, predict_dir)
     print(f"Total invalid predictions skipped: {ERR_CNT}")

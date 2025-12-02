@@ -1,2 +1,2 @@
 bash serve_lora.sh /home/ws/Qwen3-4B /home/ws/lora-v2 4B-675
-python ./client-r.py
+python ./client_r.py
